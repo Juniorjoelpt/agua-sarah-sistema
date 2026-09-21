@@ -1,0 +1,31 @@
+# Backend (Maven / Java)
+backend/target/
+backend/.mvn/
+!backend/.mvn/wrapper/maven-wrapper.jar
+*.class
+*.jar
+!backend/**/*.jar
+
+# Frontend (Node / Vite)
+frontend/node_modules/
+frontend/dist/
+frontend/dist_novo/
+frontend/dist_anterior/
+frontend/.vite/
+npm-debug.log*
+
+# IDEs
+.idea/
+*.iml
+.vscode/
+nbproject/
+.netbeans/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Variaveis de ambiente / segredos (nunca versionar)
+.env
+.env.local
+application-local.yml
