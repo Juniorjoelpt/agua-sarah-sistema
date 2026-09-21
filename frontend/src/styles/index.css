@@ -80,7 +80,14 @@ body {
 
   #recibo-impressao {
     display: block;
-    width: 100%;
+    /* a impressora reserva uma margem fixa de cada lado do rolo de 80mm que
+       nenhum CSS remove (nem com @page margin:0) - por isso, mesmo com o
+       papel sendo 80mm, a area que ela realmente imprime fica mais perto
+       de uns 72mm. Usando 100% aqui cortava letra e numero nas bordas;
+       72mm com margem automatica centraliza o recibo dentro da area
+       imprimivel real, com uma folguinha de seguranca de cada lado. */
+    width: 72mm;
+    margin: 0 auto;
     box-sizing: border-box;
   }
 
