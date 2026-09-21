@@ -10,7 +10,7 @@ import { produtosApi } from '../api/produtos';
 import { precosClienteApi } from '../api/precosCliente';
 import { rotuloPagamento } from '../utils/pagamento';
 
-const VAZIO = { nome: '', tipo: 'REVENDEDOR', telefone: '', bairro: '', endereco: '', ativo: true };
+const VAZIO = { nome: '', tipo: 'REVENDEDOR', telefone: '', bairro: '', cidade: '', endereco: '', ativo: true };
 
 const OCORRENCIA_LABEL = {
   NENHUMA: null,
@@ -71,6 +71,7 @@ export default function Clientes() {
       tipo: cliente.tipo,
       telefone: cliente.telefone || '',
       bairro: cliente.bairro || '',
+      cidade: cliente.cidade || '',
       endereco: cliente.endereco || '',
       ativo: cliente.ativo,
     });
@@ -177,6 +178,7 @@ export default function Clientes() {
           </Field>
           <Field label="Telefone"><TextInput value={form.telefone} onChange={(e) => setForm({ ...form, telefone: e.target.value })} /></Field>
           <Field label="Bairro"><TextInput value={form.bairro} onChange={(e) => setForm({ ...form, bairro: e.target.value })} /></Field>
+          <Field label="Cidade"><TextInput value={form.cidade} onChange={(e) => setForm({ ...form, cidade: e.target.value })} /></Field>
           <Field label="Endereço"><TextInput value={form.endereco} onChange={(e) => setForm({ ...form, endereco: e.target.value })} /></Field>
         </div>
         <div className="flex gap-2 mt-6">
@@ -356,7 +358,7 @@ export default function Clientes() {
               </div>
               <div className="flex flex-col gap-1 mt-3" style={{ fontSize: 12, color: C.textMuted }}>
                 <div className="flex items-center gap-1.5"><Phone size={12} /> {c.telefone || 'Não informado'}</div>
-                <div className="flex items-center gap-1.5"><MapPin size={12} /> {c.bairro || 'Não informado'}</div>
+                <div className="flex items-center gap-1.5"><MapPin size={12} /> {[c.bairro, c.cidade].filter(Boolean).join(' - ') || 'Não informado'}</div>
               </div>
             </Card>
           ))}

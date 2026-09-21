@@ -29,6 +29,7 @@ public class Cliente {
 
     private String telefone;
     private String bairro;
+    private String cidade;
     private String endereco;
 
     @Builder.Default
