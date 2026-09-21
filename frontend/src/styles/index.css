@@ -80,6 +80,19 @@ body {
     position: absolute;
     top: 0;
     left: 0;
-    width: 80mm;
+    /* 100% (nao 80mm fixo) pra acompanhar a area imprimivel real que o
+       driver da impressora reportar - em muitas termicas de bobina 80mm o
+       driver reserva uma margem propria e a area util fica um pouco menor
+       (ex: 72mm) do que o papel fisico */
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* sem isso, o padding do recibo soma por cima da largura de 80mm em vez de
+     ficar contido nela - o excesso passa da area imprimivel e sai cortado
+     (e como a caixa fica ancorada em left:0, o corte parece "desalinhado"
+     em vez de simetrico dos dois lados) */
+  #recibo-impressao * {
+    box-sizing: border-box;
   }
 }
