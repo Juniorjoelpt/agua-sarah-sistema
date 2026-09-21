@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 
 // Recibo de venda formatado pra impressora termica de 80mm (ESC/POS via
 // driver comum do Windows). Fica escondido na tela e so aparece quando o
@@ -6,6 +7,13 @@ import React from 'react';
 // styles/index.css) - por isso o layout aqui e todo em preto e branco,
 // fonte monoespacada e sem nenhum elemento visual que uma termica nao
 // consiga imprimir (sombra, gradiente, icone, etc.).
+//
+// Renderizado via portal direto no <body>, FORA da arvore do #root: se
+// ficasse dentro da tela normal (so escondido com visibility:hidden pra
+// nao quebrar o "esconde tudo, mostra so o recibo" do CSS de impressao),
+// a altura inteira da tela do sistema continuaria contando pra paginacao
+// da impressao - e e exatamente isso que fazia o recibo sair espremido
+// num canto e "estourar" pra uma segunda folha em branco.
 function moeda(v) {
   return (v ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
@@ -26,7 +34,7 @@ export default function ReciboVenda({ venda, troco }) {
   const linha = { borderTop: '1px dashed #000', margin: '6px 0' };
   const base = { fontFamily: "'Courier New', monospace", fontSize: 12, color: '#000', padding: '4px 6px', lineHeight: 1.4 };
 
-  return (
+  return createPortal(
     <div id="recibo-impressao" style={base}>
       <div style={{ textAlign: 'center', marginBottom: 4 }}>
         <div style={{ fontSize: 15, fontWeight: 700 }}>ÁGUA SARAH</div>
@@ -118,6 +126,7 @@ export default function ReciboVenda({ venda, troco }) {
       <div style={{ textAlign: 'center', fontSize: 11, marginTop: 6 }}>
         Obrigado pela preferência!
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

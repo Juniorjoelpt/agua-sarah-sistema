@@ -52,52 +52,40 @@ body {
   }
 }
 
-/* Recibo de venda para impressora termica (80mm). O bloco #recibo-impressao
-   fica escondido na tela normal (so aparece quando a pagina entra em modo de
-   impressao) e, na hora de imprimir, e a UNICA coisa que aparece - o resto
-   do sistema (menu, cards, etc.) some. */
+/* Recibo de venda para impressora termica (80mm). O componente ReciboVenda
+   renderiza esse bloco via portal direto no <body> (irmao do #root, fora da
+   arvore do sistema) - assim, escondendo #root inteiro no modo de impressao,
+   sobra literalmente so o recibo, sem a altura do resto da tela contando
+   pra paginacao (era isso que fazia sair espremido num canto e "estourar"
+   pra uma segunda folha em branco: visibility:hidden esconde visualmente
+   mas mantem o espaco ocupado no layout). */
 #recibo-impressao {
   display: none;
 }
 
 @media print {
   /* "80mm auto" nao e um valor valido de altura pro Chrome nesse contexto -
-     ele ignora a regra inteira e cai no tamanho padrao da impressora (Carta),
-     e ai o recibo sai pequeno, no canto, e pode ate estourar pra uma segunda
-     folha. Uma altura fixa (bem folgada - 297mm cobre recibos longos) resolve;
-     como a impressora e de bobina continua, o excesso em branco no fim so
+     ele ignora a regra inteira e cai no tamanho padrao da impressora (Carta).
+     Uma altura fixa (bem folgada - 297mm cobre recibos longos) resolve; como
+     a impressora e de bobina continua, o excesso em branco no fim so
      significa um pouco mais de papel avancado, nao afeta o conteudo. */
   @page {
     size: 80mm 297mm;
     margin: 0;
   }
 
-  body * {
-    visibility: hidden;
-  }
-
-  #recibo-impressao,
-  #recibo-impressao * {
-    visibility: visible;
+  #root {
+    display: none !important;
   }
 
   #recibo-impressao {
     display: block;
-    position: absolute;
-    top: 0;
-    left: 0;
-    /* 100% (nao 80mm fixo) pra acompanhar a area imprimivel real que o
-       driver da impressora reportar - em muitas termicas de bobina 80mm o
-       driver reserva uma margem propria e a area util fica um pouco menor
-       (ex: 72mm) do que o papel fisico */
     width: 100%;
     box-sizing: border-box;
   }
 
-  /* sem isso, o padding do recibo soma por cima da largura de 80mm em vez de
-     ficar contido nela - o excesso passa da area imprimivel e sai cortado
-     (e como a caixa fica ancorada em left:0, o corte parece "desalinhado"
-     em vez de simetrico dos dois lados) */
+  /* sem isso, o padding do recibo soma por cima da largura em vez de ficar
+     contido nela - o excesso passa da area imprimivel e sai cortado */
   #recibo-impressao * {
     box-sizing: border-box;
   }
