@@ -61,8 +61,14 @@ body {
 }
 
 @media print {
+  /* "80mm auto" nao e um valor valido de altura pro Chrome nesse contexto -
+     ele ignora a regra inteira e cai no tamanho padrao da impressora (Carta),
+     e ai o recibo sai pequeno, no canto, e pode ate estourar pra uma segunda
+     folha. Uma altura fixa (bem folgada - 297mm cobre recibos longos) resolve;
+     como a impressora e de bobina continua, o excesso em branco no fim so
+     significa um pouco mais de papel avancado, nao afeta o conteudo. */
   @page {
-    size: 80mm auto;
+    size: 80mm 297mm;
     margin: 0;
   }
 
