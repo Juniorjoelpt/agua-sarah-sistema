@@ -9,7 +9,7 @@ import { precosClienteApi } from '../api/precosCliente';
 import { vendasApi } from '../api/vendas';
 import { caixaApi } from '../api/caixa';
 import { rotuloPagamento } from '../utils/pagamento';
-import { AlertTriangle, Clock } from 'lucide-react';
+import { AlertTriangle, Clock, Printer } from 'lucide-react';
 
 export default function Vendas() {
   const [clientes, setClientes] = useState([]);
@@ -93,6 +93,15 @@ export default function Vendas() {
 
   function confirmarImpressao() {
     setPerguntarImpressao(false);
+    imprimir();
+  }
+
+  // reimpressao de qualquer venda ja registrada (lista "Vendas de hoje") -
+  // o troco nao fica salvo no banco (era so uma calculadora de apoio no
+  // momento da venda), entao numa reimpressao esse campo nao aparece
+  function reimprimirVenda(venda) {
+    setVendaParaImprimir(venda);
+    setTrocoParaImprimir(0);
     imprimir();
   }
 
@@ -438,6 +447,16 @@ export default function Vendas() {
                     <span style={{ fontWeight: 600, color: C.textDark, minWidth: 64, textAlign: 'right' }}>
                       {v.valorTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                     </span>
+                    <button
+                      type="button"
+                      onClick={() => reimprimirVenda(v)}
+                      aria-label="Reimprimir recibo"
+                      title="Reimprimir recibo"
+                      className="flex items-center justify-center flex-shrink-0"
+                      style={{ width: 22, height: 22, borderRadius: '50%', background: C.bg, color: C.textMuted }}
+                    >
+                      <Printer size={12} />
+                    </button>
                   </div>
                 </div>
                 {v.observacao && (
