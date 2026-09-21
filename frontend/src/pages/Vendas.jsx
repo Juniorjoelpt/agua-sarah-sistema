@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { PageHeader, Card, Field, TextInput, Segmented, ErrorBanner, Loading, Badge, SearchableSelect } from '../components/ui';
 import ReciboVenda from '../components/ReciboVenda';
+import Modal from '../components/Modal';
 import { C, DISPLAY_FONT } from '../theme';
 import { clientesApi } from '../api/clientes';
 import { produtosApi } from '../api/produtos';
@@ -38,9 +39,7 @@ export default function Vendas() {
   // (a tela em si ja limpa o formulario pra proxima venda)
   const [vendaParaImprimir, setVendaParaImprimir] = useState(null);
   const [trocoParaImprimir, setTrocoParaImprimir] = useState(0);
-  const [impressaoAutomatica, setImpressaoAutomatica] = useState(() => {
-    try { return localStorage.getItem('aguaSarah.impressaoAutomatica') !== 'false'; } catch { return true; }
-  });
+  const [perguntarImpressao, setPerguntarImpressao] = useState(false);
 
   useEffect(() => {
     async function carregar() {
@@ -84,25 +83,17 @@ export default function Vendas() {
       .catch(() => setPrecosCliente({}));
   }, [clienteId]);
 
-  // dispara a impressao assim que uma nova venda fica disponivel pro recibo -
-  // o pequeno atraso garante que o React ja atualizou o #recibo-impressao
-  // no DOM antes do navegador montar a pagina de impressao
-  useEffect(() => {
-    if (!vendaParaImprimir || !impressaoAutomatica) return;
-    const t = setTimeout(() => window.print(), 150);
-    return () => clearTimeout(t);
-  }, [vendaParaImprimir, impressaoAutomatica]);
-
-  function alternarImpressaoAutomatica() {
-    setImpressaoAutomatica((prev) => {
-      const novo = !prev;
-      try { localStorage.setItem('aguaSarah.impressaoAutomatica', String(novo)); } catch { /* ignora */ }
-      return novo;
-    });
+  // dispara a impressao (o pequeno atraso garante que o React ja atualizou
+  // o #recibo-impressao no DOM antes do navegador montar a pagina de
+  // impressao). window.print() abre o dialogo normal do navegador, onde o
+  // operador escolhe pra qual impressora mandar.
+  function imprimir() {
+    setTimeout(() => window.print(), 150);
   }
 
-  function imprimirNovamente() {
-    if (vendaParaImprimir) window.print();
+  function confirmarImpressao() {
+    setPerguntarImpressao(false);
+    imprimir();
   }
 
   function atualizarItem(index, campo, valor) {
@@ -186,6 +177,7 @@ export default function Vendas() {
       setSucesso(`Venda #${venda.id} registrada com sucesso.${valorFiadoFinal > 0 ? ' Uma conta a receber foi criada para o cliente.' : ''}`);
       setVendaParaImprimir(venda);
       setTrocoParaImprimir(troco > 0 ? troco : 0);
+      setPerguntarImpressao(true);
       setItens([{ produtoId: '', quantidade: 1 }]);
       setOcorrencia('NENHUMA');
       setQuantidadeAvarias('1');
@@ -207,19 +199,29 @@ export default function Vendas() {
 
   return (
     <div>
-      <div className="flex items-start justify-between gap-3">
-        <PageHeader title="Nova venda" />
-        <label className="flex items-center gap-1.5 mt-1" style={{ fontSize: 12, color: C.textMuted, whiteSpace: 'nowrap' }}>
-          <input type="checkbox" checked={impressaoAutomatica} onChange={alternarImpressaoAutomatica} />
-          Imprimir recibo automaticamente
-        </label>
-      </div>
+      <PageHeader title="Nova venda" />
+
+      {/* ---- Modal: perguntar se imprime o recibo desta venda ---- */}
+      <Modal open={perguntarImpressao} title="Imprimir recibo?" onClose={() => setPerguntarImpressao(false)} maxWidth={380}>
+        <p style={{ fontSize: 13, color: C.textDark, marginBottom: 16 }}>
+          Deseja imprimir o recibo desta venda? Na janela de impressão você escolhe pra qual impressora mandar.
+        </p>
+        <div className="flex gap-2">
+          <button type="button" onClick={confirmarImpressao} className="px-4 py-2 rounded text-sm font-medium" style={{ background: C.red, color: '#fff' }}>
+            Sim, imprimir
+          </button>
+          <button type="button" onClick={() => setPerguntarImpressao(false)} className="px-4 py-2 rounded text-sm" style={{ background: C.bg, color: C.textDark }}>
+            Não
+          </button>
+        </div>
+      </Modal>
+
       <ErrorBanner message={erro} />
       {sucesso && (
         <div className="flex items-center justify-between gap-3 px-3 py-2 rounded mb-4" style={{ background: C.blueLight, color: C.ink, fontSize: 13 }}>
           <span>{sucesso}</span>
           {vendaParaImprimir && (
-            <button type="button" onClick={imprimirNovamente} className="px-3 py-1 rounded text-xs font-medium flex-shrink-0" style={{ background: C.blue, color: '#fff' }}>
+            <button type="button" onClick={imprimir} className="px-3 py-1 rounded text-xs font-medium flex-shrink-0" style={{ background: C.blue, color: '#fff' }}>
               Imprimir recibo
             </button>
           )}
