@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { PageHeader, Card, Field, TextInput, Segmented, ErrorBanner, Loading, Badge, SearchableSelect } from '../components/ui';
+import ReciboVenda from '../components/ReciboVenda';
 import { C, DISPLAY_FONT } from '../theme';
 import { clientesApi } from '../api/clientes';
 import { produtosApi } from '../api/produtos';
@@ -32,6 +33,14 @@ export default function Vendas() {
 
   const [vendasHoje, setVendasHoje] = useState([]);
   const [carregandoVendasHoje, setCarregandoVendasHoje] = useState(true);
+
+  // ultima venda registrada, guardada so pra alimentar o recibo de impressao
+  // (a tela em si ja limpa o formulario pra proxima venda)
+  const [vendaParaImprimir, setVendaParaImprimir] = useState(null);
+  const [trocoParaImprimir, setTrocoParaImprimir] = useState(0);
+  const [impressaoAutomatica, setImpressaoAutomatica] = useState(() => {
+    try { return localStorage.getItem('aguaSarah.impressaoAutomatica') !== 'false'; } catch { return true; }
+  });
 
   useEffect(() => {
     async function carregar() {
@@ -74,6 +83,27 @@ export default function Vendas() {
       })
       .catch(() => setPrecosCliente({}));
   }, [clienteId]);
+
+  // dispara a impressao assim que uma nova venda fica disponivel pro recibo -
+  // o pequeno atraso garante que o React ja atualizou o #recibo-impressao
+  // no DOM antes do navegador montar a pagina de impressao
+  useEffect(() => {
+    if (!vendaParaImprimir || !impressaoAutomatica) return;
+    const t = setTimeout(() => window.print(), 150);
+    return () => clearTimeout(t);
+  }, [vendaParaImprimir, impressaoAutomatica]);
+
+  function alternarImpressaoAutomatica() {
+    setImpressaoAutomatica((prev) => {
+      const novo = !prev;
+      try { localStorage.setItem('aguaSarah.impressaoAutomatica', String(novo)); } catch { /* ignora */ }
+      return novo;
+    });
+  }
+
+  function imprimirNovamente() {
+    if (vendaParaImprimir) window.print();
+  }
 
   function atualizarItem(index, campo, valor) {
     setItens((prev) => prev.map((it, i) => (i === index ? { ...it, [campo]: valor } : it)));
@@ -154,6 +184,8 @@ export default function Vendas() {
       };
       const venda = await vendasApi.registrar(dto);
       setSucesso(`Venda #${venda.id} registrada com sucesso.${valorFiadoFinal > 0 ? ' Uma conta a receber foi criada para o cliente.' : ''}`);
+      setVendaParaImprimir(venda);
+      setTrocoParaImprimir(troco > 0 ? troco : 0);
       setItens([{ produtoId: '', quantidade: 1 }]);
       setOcorrencia('NENHUMA');
       setQuantidadeAvarias('1');
@@ -175,10 +207,23 @@ export default function Vendas() {
 
   return (
     <div>
-      <PageHeader title="Nova venda" />
+      <div className="flex items-start justify-between gap-3">
+        <PageHeader title="Nova venda" />
+        <label className="flex items-center gap-1.5 mt-1" style={{ fontSize: 12, color: C.textMuted, whiteSpace: 'nowrap' }}>
+          <input type="checkbox" checked={impressaoAutomatica} onChange={alternarImpressaoAutomatica} />
+          Imprimir recibo automaticamente
+        </label>
+      </div>
       <ErrorBanner message={erro} />
       {sucesso && (
-        <div className="px-3 py-2 rounded mb-4" style={{ background: C.blueLight, color: C.ink, fontSize: 13 }}>{sucesso}</div>
+        <div className="flex items-center justify-between gap-3 px-3 py-2 rounded mb-4" style={{ background: C.blueLight, color: C.ink, fontSize: 13 }}>
+          <span>{sucesso}</span>
+          {vendaParaImprimir && (
+            <button type="button" onClick={imprimirNovamente} className="px-3 py-1 rounded text-xs font-medium flex-shrink-0" style={{ background: C.blue, color: '#fff' }}>
+              Imprimir recibo
+            </button>
+          )}
+        </div>
       )}
       <div className="grid grid-cols-3 gap-4">
         <Card style={{ gridColumn: 'span 2' }}>
@@ -403,6 +448,8 @@ export default function Vendas() {
           </div>
         )}
       </Card>
+
+      <ReciboVenda venda={vendaParaImprimir} troco={trocoParaImprimir} />
     </div>
   );
 }

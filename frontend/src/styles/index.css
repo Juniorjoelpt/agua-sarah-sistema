@@ -51,3 +51,35 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Recibo de venda para impressora termica (80mm). O bloco #recibo-impressao
+   fica escondido na tela normal (so aparece quando a pagina entra em modo de
+   impressao) e, na hora de imprimir, e a UNICA coisa que aparece - o resto
+   do sistema (menu, cards, etc.) some. */
+#recibo-impressao {
+  display: none;
+}
+
+@media print {
+  @page {
+    size: 80mm auto;
+    margin: 0;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  #recibo-impressao,
+  #recibo-impressao * {
+    visibility: visible;
+  }
+
+  #recibo-impressao {
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 80mm;
+  }
+}
