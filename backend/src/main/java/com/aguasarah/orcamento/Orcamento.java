@@ -42,7 +42,13 @@ public class Orcamento {
     @Column(length = 1000)
     private String observacoes;
 
-    private BigDecimal valorTotal;
+    @Builder.Default
+    private BigDecimal valorBruto = BigDecimal.ZERO; // soma dos itens, antes do desconto % de cada um
+
+    @Builder.Default
+    private BigDecimal valorDescontoItens = BigDecimal.ZERO; // soma dos descontos % aplicados item a item
+
+    private BigDecimal valorTotal; // valorBruto - valorDescontoItens
 
     @Enumerated(EnumType.STRING)
     @Builder.Default

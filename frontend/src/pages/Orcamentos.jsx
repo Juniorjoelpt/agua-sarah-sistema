@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { FileText, Pencil, Trash2, CheckCircle2, XCircle, Download } from 'lucide-react';
-import { SectionHeaderWithAction, Card, Field, TextInput, Segmented, ErrorBanner, Loading, Badge, EmptyState, SearchableSelect } from '../components/ui';
+import { SectionHeaderWithAction, Card, Field, TextInput, Segmented, ErrorBanner, Loading, Badge, EmptyState, SearchableSelect, PercentInput } from '../components/ui';
 import Modal from '../components/Modal';
 import { C, DISPLAY_FONT } from '../theme';
 import { orcamentosApi } from '../api/orcamentos';
@@ -34,7 +34,7 @@ export default function Orcamentos() {
   const [modalAberto, setModalAberto] = useState(false);
   const [editandoId, setEditandoId] = useState(null);
   const [form, setForm] = useState(FORM_VAZIO);
-  const [itens, setItens] = useState([{ produtoId: '', quantidade: 1 }]);
+  const [itens, setItens] = useState([{ produtoId: '', quantidade: 1, percentualDesconto: '' }]);
   const [precosCliente, setPrecosCliente] = useState({});
 
   const [paraExcluir, setParaExcluir] = useState(null);
@@ -80,15 +80,23 @@ export default function Orcamentos() {
     return personalizado !== undefined ? personalizado : produto.preco;
   }
 
-  const totalPreview = itens.reduce((soma, it) => {
+  function subtotalBrutoItem(it) {
     const produto = produtoPorId(it.produtoId);
-    return produto ? soma + precoEfetivo(produto) * Number(it.quantidade || 0) : soma;
-  }, 0);
+    return produto ? precoEfetivo(produto) * Number(it.quantidade || 0) : 0;
+  }
+  function valorDescontoItem(it) {
+    const percentual = Number(it.percentualDesconto || 0);
+    return percentual > 0 ? (subtotalBrutoItem(it) * percentual) / 100 : 0;
+  }
+
+  const totalBrutoPreview = itens.reduce((soma, it) => soma + subtotalBrutoItem(it), 0);
+  const totalDescontoPreview = itens.reduce((soma, it) => soma + valorDescontoItem(it), 0);
+  const totalPreview = totalBrutoPreview - totalDescontoPreview;
 
   function abrirNovo() {
     setEditandoId(null);
     setForm(FORM_VAZIO);
-    setItens([{ produtoId: '', quantidade: 1 }]);
+    setItens([{ produtoId: '', quantidade: 1, percentualDesconto: '' }]);
     setModalAberto(true);
   }
 
@@ -102,7 +110,7 @@ export default function Orcamentos() {
       validoAte: orc.validoAte || '',
       observacoes: orc.observacoes || '',
     });
-    setItens(orc.itens.map((i) => ({ produtoId: i.produto.id, quantidade: i.quantidade })));
+    setItens(orc.itens.map((i) => ({ produtoId: i.produto.id, quantidade: i.quantidade, percentualDesconto: i.percentualDesconto && Number(i.percentualDesconto) > 0 ? String(i.percentualDesconto) : '' })));
     setModalAberto(true);
   }
 
@@ -110,7 +118,7 @@ export default function Orcamentos() {
     setItens((prev) => prev.map((it, i) => (i === index ? { ...it, [campo]: valor } : it)));
   }
   function adicionarItem() {
-    setItens((prev) => [...prev, { produtoId: '', quantidade: 1 }]);
+    setItens((prev) => [...prev, { produtoId: '', quantidade: 1, percentualDesconto: '' }]);
   }
   function removerItem(index) {
     setItens((prev) => prev.filter((_, i) => i !== index));
@@ -126,7 +134,7 @@ export default function Orcamentos() {
         telefoneClienteAvulso: form.tipoCliente === 'AVULSO' ? form.telefoneClienteAvulso : null,
         validoAte: form.validoAte || null,
         observacoes: form.observacoes || null,
-        itens: itens.filter((it) => it.produtoId).map((it) => ({ produtoId: Number(it.produtoId), quantidade: Number(it.quantidade) })),
+        itens: itens.filter((it) => it.produtoId).map((it) => ({ produtoId: Number(it.produtoId), quantidade: Number(it.quantidade), percentualDesconto: Number(it.percentualDesconto || 0) })),
       };
       if (editandoId) {
         await orcamentosApi.atualizar(editandoId, dto);
@@ -236,6 +244,13 @@ export default function Orcamentos() {
                 value={item.quantidade}
                 onChange={(e) => atualizarItem(index, 'quantidade', e.target.value)}
               />
+              <div style={{ width: 90 }}>
+                <PercentInput
+                  value={item.percentualDesconto}
+                  onChange={(v) => atualizarItem(index, 'percentualDesconto', v)}
+                  placeholder="Desc. %"
+                />
+              </div>
               {itens.length > 1 && (
                 <button type="button" onClick={() => removerItem(index)} className="px-2 text-xs" style={{ color: C.red }}>Remover</button>
               )}
@@ -247,7 +262,7 @@ export default function Orcamentos() {
         <div className="grid grid-cols-2 gap-4 mt-4">
           <Field label="Válido até (opcional)"><TextInput type="date" value={form.validoAte} onChange={(e) => setForm({ ...form, validoAte: e.target.value })} /></Field>
           <div className="rounded-lg p-3 flex flex-col justify-center" style={{ background: C.blueLight }}>
-            <div style={{ fontSize: 11, color: C.ink }}>Valor total</div>
+            <div style={{ fontSize: 11, color: C.ink }}>Valor total{totalDescontoPreview > 0 ? ` (desconto: ${moeda(totalDescontoPreview)})` : ''}</div>
             <div style={{ fontSize: 18, fontWeight: 600, color: C.ink, fontFamily: DISPLAY_FONT }}>{moeda(totalPreview)}</div>
           </div>
         </div>
@@ -321,7 +336,12 @@ export default function Orcamentos() {
 
               <div className="flex items-center justify-between mt-3">
                 <Badge tone={STATUS_TONE[orc.status]}>{STATUS_LABEL[orc.status]}</Badge>
-                <div style={{ fontSize: 18, fontWeight: 600, color: C.textDark, fontFamily: DISPLAY_FONT }}>{moeda(orc.valorTotal)}</div>
+                <div className="text-right">
+                  {orc.valorDescontoItens > 0 && (
+                    <div style={{ fontSize: 11, color: C.textMuted, textDecoration: 'line-through' }}>{moeda(orc.valorBruto)}</div>
+                  )}
+                  <div style={{ fontSize: 18, fontWeight: 600, color: C.textDark, fontFamily: DISPLAY_FONT }}>{moeda(orc.valorTotal)}</div>
+                </div>
               </div>
 
               {orc.status === 'PENDENTE' && (

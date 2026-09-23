@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Receipt } from 'lucide-react';
-import { SectionHeaderWithAction, Card, Field, TextInput, Segmented, ErrorBanner, Loading, Badge, EmptyState } from '../components/ui';
+import { SectionHeaderWithAction, Card, Field, TextInput, Segmented, ErrorBanner, Loading, Badge, EmptyState, MoneyInput } from '../components/ui';
 import Modal from '../components/Modal';
 import { C, DISPLAY_FONT } from '../theme';
 import { despesasApi } from '../api/despesas';
@@ -70,7 +70,7 @@ export default function Despesas() {
         <ErrorBanner message={erro} />
         <div className="grid grid-cols-2 gap-4">
           <Field label="Descrição"><TextInput value={form.descricao} onChange={(e) => setForm({ ...form, descricao: e.target.value })} /></Field>
-          <Field label="Valor"><TextInput type="number" step="0.01" value={form.valor} onChange={(e) => setForm({ ...form, valor: e.target.value })} /></Field>
+          <Field label="Valor"><MoneyInput value={form.valor} onChange={(v) => setForm({ ...form, valor: v })} /></Field>
           <Field label="Categoria">
             <Segmented
               options={[['FROTA', 'Frota'], ['PRODUCAO', 'Produção'], ['INSUMOS', 'Insumos'], ['OUTROS', 'Outros']]}

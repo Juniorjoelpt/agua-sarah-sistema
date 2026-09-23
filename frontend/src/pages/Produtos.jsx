@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Droplet, Package, Pencil } from 'lucide-react';
-import { SectionHeaderWithAction, Card, Field, TextInput, Segmented, ErrorBanner, Loading, Badge, EmptyState } from '../components/ui';
+import { SectionHeaderWithAction, Card, Field, TextInput, Segmented, ErrorBanner, Loading, Badge, EmptyState, MoneyInput } from '../components/ui';
 import Modal from '../components/Modal';
 import { C, DISPLAY_FONT } from '../theme';
 import { produtosApi } from '../api/produtos';
@@ -74,7 +74,7 @@ export default function Produtos() {
         <ErrorBanner message={erro} />
         <div className="grid grid-cols-2 gap-4">
           <Field label="Nome"><TextInput value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} /></Field>
-          <Field label="Preço"><TextInput type="number" step="0.01" value={form.preco} onChange={(e) => setForm({ ...form, preco: e.target.value })} /></Field>
+          <Field label="Preço"><MoneyInput value={form.preco} onChange={(v) => setForm({ ...form, preco: v })} /></Field>
           <Field label="Conta como envase de água?">
             <Segmented options={[['true', 'Sim'], ['false', 'Não']]} value={String(form.contaComoEnvase)} onChange={(v) => setForm({ ...form, contaComoEnvase: v === 'true' })} />
           </Field>

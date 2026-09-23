@@ -129,6 +129,78 @@ export function TextInput(props) {
   return <input className="w-full px-3 py-2 rounded border" style={{ borderColor: C.border, fontSize: 14, background: C.paper }} {...props} />;
 }
 
+// Campo de valor monetario - formata como "R$ 1.234,56" enquanto o usuario
+// digita (os digitos sao sempre lidos como centavos, da direita pra
+// esquerda, igual um caixa eletronico ou maquininha de cartao). "value" e
+// "onChange" trabalham com numero (reais) puro, igual um input numerico
+// comum - o componente cuida da mascara por dentro.
+export function MoneyInput({ value, onChange, placeholder, disabled, style, ...rest }) {
+  function formatarCentavos(digitos) {
+    const numero = Number(digitos || '0') / 100;
+    return numero.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  }
+
+  function aoDigitar(e) {
+    const somenteDigitos = e.target.value.replace(/\D/g, '').replace(/^0+(?=\d)/, '');
+    if (somenteDigitos === '') {
+      onChange('');
+      return;
+    }
+    onChange(Number(somenteDigitos) / 100);
+  }
+
+  const digitos = value === '' || value === null || value === undefined
+    ? ''
+    : String(Math.round(Number(value) * 100));
+
+  return (
+    <input
+      type="text"
+      inputMode="decimal"
+      className="w-full px-3 py-2 rounded border text-right"
+      style={{ borderColor: C.border, fontSize: 14, background: C.paper, ...style }}
+      value={digitos === '' ? '' : formatarCentavos(digitos)}
+      onChange={aoDigitar}
+      placeholder={placeholder || 'R$ 0,00'}
+      disabled={disabled}
+      {...rest}
+    />
+  );
+}
+
+// Campo de porcentagem (0-100, ate 2 casas) - usado no desconto por item.
+// Aceita digitacao livre de numero com virgula/ponto, sem mascara agressiva
+// (diferente do MoneyInput) porque aqui o valor "cru" e mais natural de
+// digitar direto (ex: 10, 12.5) do que por centavos.
+export function PercentInput({ value, onChange, placeholder, disabled, style, ...rest }) {
+  function aoDigitar(e) {
+    let texto = e.target.value.replace(',', '.').replace(/[^0-9.]/g, '');
+    const partes = texto.split('.');
+    if (partes.length > 2) texto = partes[0] + '.' + partes.slice(1).join('');
+    if (texto === '') {
+      onChange('');
+      return;
+    }
+    const numero = Number(texto);
+    if (!Number.isNaN(numero) && numero > 100) return; // nao deixa passar de 100%
+    onChange(texto);
+  }
+
+  return (
+    <input
+      type="text"
+      inputMode="decimal"
+      className="w-full px-3 py-2 rounded border text-right"
+      style={{ borderColor: C.border, fontSize: 14, background: C.paper, ...style }}
+      value={value ?? ''}
+      onChange={aoDigitar}
+      placeholder={placeholder || '0%'}
+      disabled={disabled}
+      {...rest}
+    />
+  );
+}
+
 export function Segmented({ options, value, onChange }) {
   return (
     <div className="flex gap-2 flex-wrap">

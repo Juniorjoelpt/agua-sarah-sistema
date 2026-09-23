@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { SectionHeaderWithAction, Card, Field, TextInput, Segmented, ErrorBanner, Loading, Badge, EmptyState, Avatar, SearchableSelect } from '../components/ui';
+import { SectionHeaderWithAction, Card, Field, TextInput, Segmented, ErrorBanner, Loading, Badge, EmptyState, Avatar, SearchableSelect, MoneyInput } from '../components/ui';
 import Modal from '../components/Modal';
 import { C, DISPLAY_FONT } from '../theme';
 import { contasReceberApi } from '../api/contasReceber';
@@ -138,7 +138,7 @@ export default function ContasReceber() {
           <Field label="Descrição"><TextInput placeholder="Ex: Dívida anterior" value={novaConta.descricao} onChange={(e) => setNovaConta({ ...novaConta, descricao: e.target.value })} /></Field>
         </div>
         <div className="grid grid-cols-2 gap-4 mt-3">
-          <Field label="Valor"><TextInput type="number" step="0.01" value={novaConta.valorOriginal} onChange={(e) => setNovaConta({ ...novaConta, valorOriginal: e.target.value })} /></Field>
+          <Field label="Valor"><MoneyInput value={novaConta.valorOriginal} onChange={(v) => setNovaConta({ ...novaConta, valorOriginal: v })} /></Field>
           <Field label="Vencimento (opcional)"><TextInput type="date" value={novaConta.dataVencimento} onChange={(e) => setNovaConta({ ...novaConta, dataVencimento: e.target.value })} /></Field>
         </div>
         <div className="flex gap-2 mt-6">
@@ -171,8 +171,8 @@ export default function ContasReceber() {
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <Field label="Recebido em espécie"><TextInput type="number" step="0.01" value={valorEspecieInput} onChange={(e) => setValorEspecieInput(e.target.value)} /></Field>
-              <Field label="Recebido em PIX"><TextInput type="number" step="0.01" value={valorPixInput} onChange={(e) => setValorPixInput(e.target.value)} /></Field>
+              <Field label="Recebido em espécie"><MoneyInput value={valorEspecieInput} onChange={setValorEspecieInput} /></Field>
+              <Field label="Recebido em PIX"><MoneyInput value={valorPixInput} onChange={setValorPixInput} /></Field>
             </div>
             <button type="button" onClick={preencherRestante} className="text-xs mt-2" style={{ color: C.blue }}>Preencher com o saldo devedor (espécie)</button>
 

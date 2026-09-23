@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { AlertTriangle } from 'lucide-react';
-import { SectionHeaderWithAction, Card, Field, TextInput, Segmented, ErrorBanner, Loading, Badge, EmptyState, Avatar } from '../../components/ui';
+import { SectionHeaderWithAction, Card, Field, TextInput, Segmented, ErrorBanner, Loading, Badge, EmptyState, Avatar, MoneyInput } from '../../components/ui';
 import Modal from '../../components/Modal';
 import { C, DISPLAY_FONT } from '../../theme';
 import { contasPagarTerceirosApi } from '../../api/terceiros/contasPagar';
@@ -155,7 +155,7 @@ export default function ContasPagarTerceiros() {
           </Field>
         </div>
         <div className="grid grid-cols-2 gap-4 mt-3">
-          <Field label="Valor"><TextInput type="number" step="0.01" value={novaConta.valorOriginal} onChange={(e) => setNovaConta({ ...novaConta, valorOriginal: e.target.value })} /></Field>
+          <Field label="Valor"><MoneyInput value={novaConta.valorOriginal} onChange={(v) => setNovaConta({ ...novaConta, valorOriginal: v })} /></Field>
           <Field label="Vencimento"><TextInput type="date" value={novaConta.dataVencimento} onChange={(e) => setNovaConta({ ...novaConta, dataVencimento: e.target.value })} /></Field>
         </div>
         <div className="mt-3">
@@ -178,7 +178,7 @@ export default function ContasPagarTerceiros() {
               <div className="flex justify-between" style={{ fontSize: 13 }}><span style={{ color: C.textMuted }}>Já pago</span><span style={{ color: C.textDark }}>{moeda(contaPagamento.valorPago)}</span></div>
               <div className="flex justify-between pt-1" style={{ borderTop: `1px solid ${C.border}`, fontWeight: 600, fontSize: 13 }}><span>Saldo devedor</span><span>{moeda(saldoDevedorPagamento)}</span></div>
             </div>
-            <Field label="Valor a pagar agora"><TextInput type="number" step="0.01" value={valorPagamentoInput} onChange={(e) => setValorPagamentoInput(e.target.value)} /></Field>
+            <Field label="Valor a pagar agora"><MoneyInput value={valorPagamentoInput} onChange={(v) => setValorPagamentoInput(v)} /></Field>
             <button type="button" onClick={() => setValorPagamentoInput(String(saldoDevedorPagamento))} className="text-xs mt-1" style={{ color: C.blue }}>Preencher com o saldo devedor</button>
 
             {caixaAberto?.id ? (

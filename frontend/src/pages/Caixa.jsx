@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { History } from 'lucide-react';
-import { PageHeader, Card, Field, TextInput, ErrorBanner, Loading, Badge, EmptyState } from '../components/ui';
+import { PageHeader, Card, Field, TextInput, ErrorBanner, Loading, Badge, EmptyState, MoneyInput } from '../components/ui';
 import Modal from '../components/Modal';
 import { C, DISPLAY_FONT } from '../theme';
 import { caixaApi } from '../api/caixa';
@@ -175,11 +175,11 @@ export default function Caixa() {
           ) : (
             <>
               <Field label="Saldo inicial - Espécie">
-                <TextInput type="number" step="0.01" value={especie} onChange={(e) => setEspecie(e.target.value)} />
+                <MoneyInput value={especie} onChange={setEspecie} />
               </Field>
               <div className="mb-3" />
               <Field label="Saldo inicial - PIX">
-                <TextInput type="number" step="0.01" value={pix} onChange={(e) => setPix(e.target.value)} />
+                <MoneyInput value={pix} onChange={setPix} />
               </Field>
               <button onClick={abrir} disabled={salvando} className="w-full mt-4 py-2 rounded text-sm font-medium disabled:opacity-60" style={{ background: C.red, color: '#fff' }}>
                 {salvando ? 'Abrindo...' : 'Abrir caixa'}

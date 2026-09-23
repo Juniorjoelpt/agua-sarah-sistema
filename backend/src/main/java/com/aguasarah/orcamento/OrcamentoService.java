@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -68,25 +69,40 @@ public class OrcamentoService {
     }
 
     private void preencherItens(Orcamento orcamento, List<OrcamentoRequestDTO.ItemOrcamentoRequestDTO> itensDto) {
-        BigDecimal valorTotal = BigDecimal.ZERO;
+        BigDecimal valorBruto = BigDecimal.ZERO;
+        BigDecimal valorDescontoItens = BigDecimal.ZERO;
         for (OrcamentoRequestDTO.ItemOrcamentoRequestDTO itemDto : itensDto) {
             Produto produto = produtoRepository.findById(itemDto.produtoId())
                     .orElseThrow(() -> new EntityNotFoundException("Produto nao encontrado: " + itemDto.produtoId()));
 
+            BigDecimal percentualDesconto = itemDto.percentualDesconto() != null ? itemDto.percentualDesconto() : BigDecimal.ZERO;
+            if (percentualDesconto.compareTo(BigDecimal.ZERO) < 0 || percentualDesconto.compareTo(new BigDecimal("100")) > 0) {
+                throw new RegraNegocioException("O desconto do item precisa estar entre 0% e 100%");
+            }
+
             // usa o preco personalizado do cliente pra esse produto, se existir - so vale pra cliente cadastrado
             BigDecimal precoUnitario = precoClienteService.precoEfetivo(produto, orcamento.getCliente());
-            BigDecimal subtotal = precoUnitario.multiply(BigDecimal.valueOf(itemDto.quantidade()));
+            BigDecimal subtotalBruto = precoUnitario.multiply(BigDecimal.valueOf(itemDto.quantidade()));
+            BigDecimal valorDescontoItem = subtotalBruto.multiply(percentualDesconto)
+                    .divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
+            BigDecimal subtotal = subtotalBruto.subtract(valorDescontoItem);
+
             ItemOrcamento item = ItemOrcamento.builder()
                     .orcamento(orcamento)
                     .produto(produto)
                     .quantidade(itemDto.quantidade())
                     .precoUnitario(precoUnitario)
+                    .percentualDesconto(percentualDesconto)
+                    .valorDesconto(valorDescontoItem)
                     .subtotal(subtotal)
                     .build();
             orcamento.getItens().add(item);
-            valorTotal = valorTotal.add(subtotal);
+            valorBruto = valorBruto.add(subtotalBruto);
+            valorDescontoItens = valorDescontoItens.add(valorDescontoItem);
         }
-        orcamento.setValorTotal(valorTotal);
+        orcamento.setValorBruto(valorBruto);
+        orcamento.setValorDescontoItens(valorDescontoItens);
+        orcamento.setValorTotal(valorBruto.subtract(valorDescontoItens));
     }
 
     private void validarCliente(OrcamentoRequestDTO dto) {

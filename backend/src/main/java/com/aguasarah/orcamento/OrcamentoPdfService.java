@@ -124,9 +124,17 @@ public class OrcamentoPdfService {
             infoCliente.addCell(cellCliente);
             document.add(infoCliente);
 
-            PdfPTable table = new PdfPTable(new float[]{46, 14, 20, 20});
+            boolean temDesconto = orcamento.getValorDescontoItens() != null
+                    && orcamento.getValorDescontoItens().compareTo(BigDecimal.ZERO) > 0;
+
+            PdfPTable table = temDesconto
+                    ? new PdfPTable(new float[]{38, 12, 18, 12, 20})
+                    : new PdfPTable(new float[]{46, 14, 20, 20});
             table.setWidthPercentage(100);
-            for (String h : new String[]{"Produto", "Qtd.", "Preço unit.", "Subtotal"}) {
+            String[] cabecalhos = temDesconto
+                    ? new String[]{"Produto", "Qtd.", "Preço unit.", "Desc.", "Subtotal"}
+                    : new String[]{"Produto", "Qtd.", "Preço unit.", "Subtotal"};
+            for (String h : cabecalhos) {
                 PdfPCell cell = new PdfPCell(new Phrase(h, FONTE_CABECALHO_TABELA));
                 cell.setBackgroundColor(NAVY);
                 cell.setPadding(6);
@@ -140,6 +148,13 @@ public class OrcamentoPdfService {
                 table.addCell(celula(item.getProduto().getNome(), FONTE_CELULA, par));
                 table.addCell(celula(String.valueOf(item.getQuantidade()), FONTE_CELULA, par));
                 table.addCell(celula(FMT_MOEDA.format(item.getPrecoUnitario()), FONTE_CELULA, par));
+                if (temDesconto) {
+                    BigDecimal percentual = item.getPercentualDesconto();
+                    String desc = percentual != null && percentual.compareTo(BigDecimal.ZERO) > 0
+                            ? percentual.stripTrailingZeros().toPlainString() + "%"
+                            : "-";
+                    table.addCell(celula(desc, FONTE_CELULA_MUTED, par));
+                }
                 table.addCell(celula(FMT_MOEDA.format(item.getSubtotal()), FONTE_CELULA_NEGRITO, par));
             }
             document.add(table);
@@ -157,6 +172,13 @@ public class OrcamentoPdfService {
             totalCell.setBackgroundColor(BLUE_LIGHT);
             totalCell.setBorderColor(BLUE_LIGHT);
             totalCell.setPadding(10);
+            if (temDesconto) {
+                Paragraph brutoLinha = new Paragraph(
+                        "Subtotal: " + FMT_MOEDA.format(orcamento.getValorBruto())
+                                + "   ·   Desconto: -" + FMT_MOEDA.format(orcamento.getValorDescontoItens()),
+                        FONTE_CELULA_MUTED);
+                totalCell.addElement(brutoLinha);
+            }
             Paragraph totalLabel = new Paragraph("Valor total", FONTE_SUBTITULO);
             Paragraph totalValor = new Paragraph(FMT_MOEDA.format(orcamento.getValorTotal()), FONTE_TOTAL);
             totalCell.addElement(totalLabel);

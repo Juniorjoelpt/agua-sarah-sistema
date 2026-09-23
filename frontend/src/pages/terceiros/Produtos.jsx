@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Package, Pencil } from 'lucide-react';
-import { SectionHeaderWithAction, Card, Field, TextInput, ErrorBanner, Loading, Badge, EmptyState } from '../../components/ui';
+import { SectionHeaderWithAction, Card, Field, TextInput, ErrorBanner, Loading, Badge, EmptyState, MoneyInput } from '../../components/ui';
 import Modal from '../../components/Modal';
 import { C } from '../../theme';
 import { produtosTerceirosApi } from '../../api/terceiros/produtos';
@@ -71,7 +71,7 @@ export default function ProdutosTerceiros() {
         <ErrorBanner message={erro} />
         <div className="grid grid-cols-2 gap-4">
           <Field label="Nome"><TextInput value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} /></Field>
-          <Field label="Preço"><TextInput type="number" step="0.01" value={form.preco} onChange={(e) => setForm({ ...form, preco: e.target.value })} /></Field>
+          <Field label="Preço"><MoneyInput value={form.preco} onChange={(v) => setForm({ ...form, preco: v })} /></Field>
         </div>
         <div className="flex gap-2 mt-6">
           <button type="button" disabled={salvando || !form.nome || !form.preco} onClick={salvar} className="px-4 py-2 rounded text-sm font-medium disabled:opacity-60" style={{ background: C.red, color: '#fff' }}>

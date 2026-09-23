@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Truck, User, Pencil, History, CalendarDays } from 'lucide-react';
-import { Card, Field, TextInput, ErrorBanner, Loading, Badge, EmptyState, SearchableSelect } from '../../components/ui';
+import { Card, Field, TextInput, ErrorBanner, Loading, Badge, EmptyState, SearchableSelect, MoneyInput } from '../../components/ui';
 import Modal from '../../components/Modal';
 import { C, DISPLAY_FONT } from '../../theme';
 import { frotaTerceirosApi } from '../../api/terceiros/frota';
@@ -299,7 +299,7 @@ export default function FrotaTerceiros() {
         </div>
         <div className="mt-3">
           <Field label="Valor de venda (por unidade)">
-            <TextInput type="number" step="0.01" value={carregamentoForm.precoVenda} onChange={(e) => setCarregamentoForm({ ...carregamentoForm, precoVenda: e.target.value })} />
+            <MoneyInput value={carregamentoForm.precoVenda} onChange={(v) => setCarregamentoForm({ ...carregamentoForm, precoVenda: v })} />
           </Field>
         </div>
         <div className="mt-3 px-3 py-2 rounded" style={{ background: C.amberLight, color: '#7A4A1F', fontSize: 12 }}>
@@ -351,7 +351,7 @@ export default function FrotaTerceiros() {
                   <Field label="Descrição"><TextInput placeholder="Ex: Combustível" value={novaDespesa.descricao} onChange={(e) => setNovaDespesa({ ...novaDespesa, descricao: e.target.value })} /></Field>
                 </div>
                 <div style={{ width: 110 }}>
-                  <Field label="Valor"><TextInput type="number" step="0.01" value={novaDespesa.valor} onChange={(e) => setNovaDespesa({ ...novaDespesa, valor: e.target.value })} /></Field>
+                  <Field label="Valor"><MoneyInput value={novaDespesa.valor} onChange={(v) => setNovaDespesa({ ...novaDespesa, valor: v })} /></Field>
                 </div>
                 <button
                   type="button"

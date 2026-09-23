@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Phone, MapPin, Pencil, History, AlertTriangle, Tag } from 'lucide-react';
-import { SectionHeaderWithAction, Card, Field, TextInput, Segmented, ErrorBanner, Loading, Avatar, Badge, EmptyState } from '../components/ui';
+import { SectionHeaderWithAction, Card, Field, TextInput, Segmented, ErrorBanner, Loading, Avatar, Badge, EmptyState, MoneyInput } from '../components/ui';
 import Modal from '../components/Modal';
 import { C, DISPLAY_FONT } from '../theme';
 import { clientesApi } from '../api/clientes';
@@ -297,13 +297,11 @@ export default function Clientes() {
                   <div style={{ fontSize: 13, color: C.textDark }} className="truncate">{p.nome}</div>
                   <div style={{ fontSize: 11, color: C.textMuted }}>Padrão: {moeda(p.preco)}</div>
                 </div>
-                <TextInput
-                  type="number"
-                  step="0.01"
+                <MoneyInput
                   placeholder="usar padrão"
                   style={{ width: 120, flexShrink: 0 }}
                   value={precosForm[p.id] ?? ''}
-                  onChange={(e) => setPrecosForm({ ...precosForm, [p.id]: e.target.value })}
+                  onChange={(v) => setPrecosForm({ ...precosForm, [p.id]: v })}
                 />
               </div>
             ))}

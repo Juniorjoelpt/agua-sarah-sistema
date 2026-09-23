@@ -57,17 +57,29 @@ export default function ReciboVenda({ venda, troco }) {
             <span>{moeda(item.precoUnitario)} un.</span>
             <span>{moeda(item.subtotal)}</span>
           </div>
+          {item.percentualDesconto > 0 && (
+            <div style={{ fontSize: 11, display: 'flex', justifyContent: 'space-between' }}>
+              <span>Desconto ({Number(item.percentualDesconto).toLocaleString('pt-BR')}%)</span>
+              <span>-{moeda(item.valorDesconto)}</span>
+            </div>
+          )}
         </div>
       ))}
 
       <div style={linha} />
 
-      {(venda.valorAvaria > 0 || venda.valorBonificado > 0) && (
+      {(venda.valorDescontoItens > 0 || venda.valorAvaria > 0 || venda.valorBonificado > 0) && (
         <>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
             <span>Subtotal</span>
             <span>{moeda(venda.valorBruto)}</span>
           </div>
+          {venda.valorDescontoItens > 0 && (
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span>Desconto itens</span>
+              <span>-{moeda(venda.valorDescontoItens)}</span>
+            </div>
+          )}
           {venda.ocorrencia && venda.ocorrencia !== 'NENHUMA' && (
             <div style={{ fontSize: 11 }}>{OCORRENCIA_LABEL[venda.ocorrencia]}{venda.quantidadeAvarias ? ` - ${venda.quantidadeAvarias} galão(ões)` : ''}</div>
           )}

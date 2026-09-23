@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { PageHeader, Card, Field, TextInput, Segmented, ErrorBanner, Loading, Badge, SearchableSelect } from '../components/ui';
+import { PageHeader, Card, Field, TextInput, Segmented, ErrorBanner, Loading, Badge, SearchableSelect, MoneyInput, PercentInput } from '../components/ui';
 import ReciboVenda from '../components/ReciboVenda';
 import Modal from '../components/Modal';
 import { C, DISPLAY_FONT } from '../theme';
@@ -21,7 +21,7 @@ export default function Vendas() {
 
   const [clienteId, setClienteId] = useState('');
   const [precosCliente, setPrecosCliente] = useState({}); // { [produtoId]: precoPersonalizado }
-  const [itens, setItens] = useState([{ produtoId: '', quantidade: 1 }]);
+  const [itens, setItens] = useState([{ produtoId: '', quantidade: 1, percentualDesconto: '' }]);
   const [modoPagamento, setModoPagamento] = useState('PIX'); // 'PIX' | 'ESPECIE' | 'FIADO' | 'DIVIDIDO'
   const [valorEspecieInput, setValorEspecieInput] = useState('');
   const [valorPixInput, setValorPixInput] = useState('');
@@ -110,7 +110,7 @@ export default function Vendas() {
   }
 
   function adicionarItem() {
-    setItens((prev) => [...prev, { produtoId: '', quantidade: 1 }]);
+    setItens((prev) => [...prev, { produtoId: '', quantidade: 1, percentualDesconto: '' }]);
   }
 
   function removerItem(index) {
@@ -128,12 +128,23 @@ export default function Vendas() {
     return personalizado !== undefined ? personalizado : produto.preco;
   }
 
-  const totalBruto = itens.reduce((soma, it) => {
+  // subtotal do item ANTES do desconto % dele (igual ao backend: valorBruto e a soma disso,
+  // sem entrar o desconto de item nenhum ainda)
+  function subtotalBrutoItem(it) {
     const produto = produtoPorId(it.produtoId);
-    return produto ? soma + precoEfetivo(produto) * Number(it.quantidade || 0) : soma;
-  }, 0);
+    return produto ? precoEfetivo(produto) * Number(it.quantidade || 0) : 0;
+  }
+  function valorDescontoItem(it) {
+    const percentual = Number(it.percentualDesconto || 0);
+    return subtotalBrutoItem(it) * (percentual / 100);
+  }
+
+  const totalBruto = itens.reduce((soma, it) => soma + subtotalBrutoItem(it), 0);
+  const totalDescontoItens = itens.reduce((soma, it) => soma + valorDescontoItem(it), 0);
+  const totalLiquidoItens = totalBruto - totalDescontoItens;
 
   // mesma regra do backend: avaria e bonificacao = galoes x preco do produto de envase presente no carrinho
+  // (calculado sobre o preco cheio, sem o desconto % do item - pra nao acumular dois descontos)
   const produtoEnvaseNoCarrinho = itens.map((it) => produtoPorId(it.produtoId)).find((p) => p?.contaComoEnvase);
   const valorAvaria = ocorrencia !== 'NENHUMA' && produtoEnvaseNoCarrinho
     ? precoEfetivo(produtoEnvaseNoCarrinho) * Number(quantidadeAvarias || 0)
@@ -141,7 +152,7 @@ export default function Vendas() {
   const valorBonificado = ocorrencia === 'AVARIA_PRODUCAO' && produtoEnvaseNoCarrinho
     ? precoEfetivo(produtoEnvaseNoCarrinho) * Number(quantidadeBonificados || 0)
     : 0;
-  const total = Math.max(totalBruto - valorAvaria - valorBonificado, 0);
+  const total = Math.max(totalLiquidoItens - valorAvaria - valorBonificado, 0);
 
   // no modo PIX/Especie/Fiado, o valor cheio vai pro metodo escolhido; no dividido, o operador digita os tres
   const valorEspecieFinal = modoPagamento === 'ESPECIE' ? total : modoPagamento === 'DIVIDIDO' ? Number(valorEspecieInput || 0) : 0;
@@ -180,14 +191,14 @@ export default function Vendas() {
         observacao: observacao || null,
         itens: itens
           .filter((it) => it.produtoId)
-          .map((it) => ({ produtoId: Number(it.produtoId), quantidade: Number(it.quantidade) })),
+          .map((it) => ({ produtoId: Number(it.produtoId), quantidade: Number(it.quantidade), percentualDesconto: Number(it.percentualDesconto || 0) })),
       };
       const venda = await vendasApi.registrar(dto);
       setSucesso(`Venda #${venda.id} registrada com sucesso.${valorFiadoFinal > 0 ? ' Uma conta a receber foi criada para o cliente.' : ''}`);
       setVendaParaImprimir(venda);
       setTrocoParaImprimir(troco > 0 ? troco : 0);
       setPerguntarImpressao(true);
-      setItens([{ produtoId: '', quantidade: 1 }]);
+      setItens([{ produtoId: '', quantidade: 1, percentualDesconto: '' }]);
       setOcorrencia('NENHUMA');
       setQuantidadeAvarias('1');
       setQuantidadeBonificados('1');
@@ -273,6 +284,13 @@ export default function Vendas() {
                   value={item.quantidade}
                   onChange={(e) => atualizarItem(index, 'quantidade', e.target.value)}
                 />
+                <div style={{ width: 90 }}>
+                  <PercentInput
+                    value={item.percentualDesconto}
+                    onChange={(v) => atualizarItem(index, 'percentualDesconto', v)}
+                    placeholder="Desc. %"
+                  />
+                </div>
                 {itens.length > 1 && (
                   <button type="button" onClick={() => removerItem(index)} className="px-2 text-xs" style={{ color: C.red }}>Remover</button>
                 )}
@@ -331,14 +349,15 @@ export default function Vendas() {
           <div style={{ fontSize: 26, fontWeight: 500, color: C.textDark, fontFamily: DISPLAY_FONT, margin: '6px 0 4px' }}>
             {total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
           </div>
-          {(valorAvaria > 0 || valorBonificado > 0) && (
+          {(totalDescontoItens > 0 || valorAvaria > 0 || valorBonificado > 0) && (
             <div style={{ fontSize: 12, color: C.textMuted, marginBottom: 12 }}>
               {totalBruto.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} bruto
+              {totalDescontoItens > 0 && <> − {totalDescontoItens.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} desconto</>}
               {valorAvaria > 0 && <> − {valorAvaria.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} avaria</>}
               {valorBonificado > 0 && <> − {valorBonificado.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} bonificado</>}
             </div>
           )}
-          <div style={{ fontSize: 12, color: C.textMuted, marginBottom: 6, marginTop: (valorAvaria > 0 || valorBonificado > 0) ? 0 : 16 }}>Forma de pagamento</div>
+          <div style={{ fontSize: 12, color: C.textMuted, marginBottom: 6, marginTop: (totalDescontoItens > 0 || valorAvaria > 0 || valorBonificado > 0) ? 0 : 16 }}>Forma de pagamento</div>
           <Segmented
             options={[['PIX', 'PIX'], ['ESPECIE', 'Espécie'], ['FIADO', 'Fiado'], ['DIVIDIDO', 'Dividido']]}
             value={modoPagamento}
@@ -355,13 +374,13 @@ export default function Vendas() {
             <div className="mt-3">
               <div className="grid grid-cols-3 gap-2">
                 <Field label="Espécie">
-                  <TextInput type="number" step="0.01" value={valorEspecieInput} onChange={(e) => setValorEspecieInput(e.target.value)} />
+                  <MoneyInput value={valorEspecieInput} onChange={setValorEspecieInput} />
                 </Field>
                 <Field label="PIX">
-                  <TextInput type="number" step="0.01" value={valorPixInput} onChange={(e) => setValorPixInput(e.target.value)} />
+                  <MoneyInput value={valorPixInput} onChange={setValorPixInput} />
                 </Field>
                 <Field label="Fiado">
-                  <TextInput type="number" step="0.01" value={valorFiadoInput} onChange={(e) => setValorFiadoInput(e.target.value)} />
+                  <MoneyInput value={valorFiadoInput} onChange={setValorFiadoInput} />
                 </Field>
               </div>
               {Math.abs(diferencaPagamento) >= 0.01 && (
@@ -384,12 +403,10 @@ export default function Vendas() {
           {valorEspecieFinal > 0 && (
             <div className="mt-3 p-3 rounded" style={{ background: C.bg, border: `1px solid ${C.border}` }}>
               <Field label="Dinheiro entregue pelo cliente (opcional)">
-                <TextInput
-                  type="number"
-                  step="0.01"
-                  placeholder={valorEspecieFinal.toFixed(2)}
+                <MoneyInput
+                  placeholder={valorEspecieFinal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                   value={dinheiroEntregue}
-                  onChange={(e) => setDinheiroEntregue(e.target.value)}
+                  onChange={setDinheiroEntregue}
                 />
               </Field>
               {dinheiroEntregue !== '' && (

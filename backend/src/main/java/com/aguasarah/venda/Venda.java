@@ -62,9 +62,13 @@ public class Venda {
     private Integer quantidadeBonificados;
 
     private BigDecimal valorBruto;      // soma dos itens, antes de qualquer desconto
+
+    @Builder.Default
+    private BigDecimal valorDescontoItens = BigDecimal.ZERO; // soma dos descontos % aplicados item a item (ver ItemVenda.valorDesconto)
+
     private BigDecimal valorAvaria;     // quantidadeAvarias x preco do galao - desconto por avaria (cliente ou producao)
     private BigDecimal valorBonificado; // quantidadeBonificados x preco do galao - desconto adicional, so na avaria de producao
-    private BigDecimal valorTotal;      // valorBruto - valorAvaria - valorBonificado (o que o cliente efetivamente paga)
+    private BigDecimal valorTotal;      // valorBruto - valorDescontoItens - valorAvaria - valorBonificado (o que o cliente efetivamente paga)
 
     @Column(length = 500)
     private String observacao; // texto livre, opcional - qualquer detalhe que o operador queira registrar

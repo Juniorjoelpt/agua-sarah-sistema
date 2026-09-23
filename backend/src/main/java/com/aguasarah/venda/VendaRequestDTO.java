@@ -20,5 +20,9 @@ public record VendaRequestDTO(
         String observacao, // texto livre, opcional
         @NotEmpty @Valid List<ItemVendaRequestDTO> itens
 ) {
-    public record ItemVendaRequestDTO(@NotNull Long produtoId, @NotNull Integer quantidade) {}
+    public record ItemVendaRequestDTO(
+            @NotNull Long produtoId,
+            @NotNull Integer quantidade,
+            BigDecimal percentualDesconto // 0-100, opcional - desconto so deste item (validado no service)
+    ) {}
 }

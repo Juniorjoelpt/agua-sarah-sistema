@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Pencil, Phone, MapPin, History } from 'lucide-react';
-import { SectionHeaderWithAction, Card, Field, TextInput, Segmented, ErrorBanner, Loading, Avatar, Badge, EmptyState } from '../components/ui';
+import { SectionHeaderWithAction, Card, Field, TextInput, Segmented, ErrorBanner, Loading, Avatar, Badge, EmptyState, MoneyInput } from '../components/ui';
 import Modal from '../components/Modal';
 import { C, DISPLAY_FONT } from '../theme';
 import { fornecedoresApi } from '../api/fornecedores';
@@ -207,7 +207,7 @@ export default function Fornecedores() {
         <ErrorBanner message={erro} />
         <div className="grid grid-cols-2 gap-4">
           <Field label="Descrição"><TextInput placeholder="Ex: Lacres e rótulos" value={novaCompra.descricao} onChange={(e) => setNovaCompra({ ...novaCompra, descricao: e.target.value })} /></Field>
-          <Field label="Valor"><TextInput type="number" step="0.01" value={novaCompra.valor} onChange={(e) => setNovaCompra({ ...novaCompra, valor: e.target.value })} /></Field>
+          <Field label="Valor"><MoneyInput value={novaCompra.valor} onChange={(v) => setNovaCompra({ ...novaCompra, valor: v })} /></Field>
         </div>
         <div className="mt-3">
           <Field label="Categoria">

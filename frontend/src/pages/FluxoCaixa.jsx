@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Landmark, Pencil, Wallet2, Plug } from 'lucide-react';
-import { SectionHeaderWithAction, Card, Field, TextInput, Segmented, ErrorBanner, Loading, Badge, EmptyState } from '../components/ui';
+import { SectionHeaderWithAction, Card, Field, TextInput, Segmented, ErrorBanner, Loading, Badge, EmptyState, MoneyInput } from '../components/ui';
 import Modal from '../components/Modal';
 import { C, DISPLAY_FONT } from '../theme';
 import { fluxoCaixaApi } from '../api/fluxoCaixa';
@@ -151,7 +151,7 @@ export default function FluxoCaixa() {
           <Field label="Agência"><TextInput value={form.agencia} onChange={(e) => setForm({ ...form, agencia: e.target.value })} /></Field>
           <Field label="Número da conta"><TextInput value={form.numeroConta} onChange={(e) => setForm({ ...form, numeroConta: e.target.value })} /></Field>
           <Field label="Chave PIX (opcional)"><TextInput value={form.chavePix} onChange={(e) => setForm({ ...form, chavePix: e.target.value })} /></Field>
-          <Field label="Saldo inicial"><TextInput type="number" step="0.01" value={form.saldoInicial} onChange={(e) => setForm({ ...form, saldoInicial: e.target.value })} /></Field>
+          <Field label="Saldo inicial"><MoneyInput value={form.saldoInicial} onChange={(v) => setForm({ ...form, saldoInicial: v })} /></Field>
         </div>
         <div className="flex gap-2 mt-6">
           <button type="button" disabled={salvando || !form.apelido} onClick={salvarConta} className="px-4 py-2 rounded text-sm font-medium disabled:opacity-60" style={{ background: C.red, color: '#fff' }}>
@@ -176,7 +176,7 @@ export default function FluxoCaixa() {
             <div className="grid grid-cols-2 gap-3 mt-3">
               <Field label="Descrição"><TextInput value={novoLancamento.descricao} onChange={(e) => setNovoLancamento({ ...novoLancamento, descricao: e.target.value })} /></Field>
               <Field label="Categoria (opcional)"><TextInput placeholder="Ex: Venda, Fornecedor..." value={novoLancamento.categoria} onChange={(e) => setNovoLancamento({ ...novoLancamento, categoria: e.target.value })} /></Field>
-              <Field label="Valor"><TextInput type="number" step="0.01" value={novoLancamento.valor} onChange={(e) => setNovoLancamento({ ...novoLancamento, valor: e.target.value })} /></Field>
+              <Field label="Valor"><MoneyInput value={novoLancamento.valor} onChange={(v) => setNovoLancamento({ ...novoLancamento, valor: v })} /></Field>
               <Field label="Data"><TextInput type="date" value={novoLancamento.data} onChange={(e) => setNovoLancamento({ ...novoLancamento, data: e.target.value })} /></Field>
             </div>
             <button

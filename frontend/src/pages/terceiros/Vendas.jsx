@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Clock } from 'lucide-react';
-import { PageHeader, Card, Field, TextInput, Segmented, ErrorBanner, Loading, Badge, SearchableSelect } from '../../components/ui';
+import { PageHeader, Card, Field, TextInput, Segmented, ErrorBanner, Loading, Badge, SearchableSelect, MoneyInput } from '../../components/ui';
 import { C, DISPLAY_FONT } from '../../theme';
 import { clientesTerceirosApi } from '../../api/terceiros/clientes';
 import { produtosTerceirosApi } from '../../api/terceiros/produtos';
@@ -190,9 +190,9 @@ export default function VendasTerceiros() {
           {modoPagamento === 'DIVIDIDO' && (
             <div className="mt-3">
               <div className="grid grid-cols-3 gap-2">
-                <Field label="Espécie"><TextInput type="number" step="0.01" value={valorEspecieInput} onChange={(e) => setValorEspecieInput(e.target.value)} /></Field>
-                <Field label="PIX"><TextInput type="number" step="0.01" value={valorPixInput} onChange={(e) => setValorPixInput(e.target.value)} /></Field>
-                <Field label="Fiado"><TextInput type="number" step="0.01" value={valorFiadoInput} onChange={(e) => setValorFiadoInput(e.target.value)} /></Field>
+                <Field label="Espécie"><MoneyInput value={valorEspecieInput} onChange={(v) => setValorEspecieInput(v)} /></Field>
+                <Field label="PIX"><MoneyInput value={valorPixInput} onChange={(v) => setValorPixInput(v)} /></Field>
+                <Field label="Fiado"><MoneyInput value={valorFiadoInput} onChange={(v) => setValorFiadoInput(v)} /></Field>
               </div>
               {!pagamentoValido && (
                 <div className="mt-2 px-3 py-2 rounded" style={{ background: C.amberLight, color: '#7A4A1F', fontSize: 12 }}>

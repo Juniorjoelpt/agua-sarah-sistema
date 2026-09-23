@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -68,6 +69,7 @@ public class VendaService {
                 .build();
 
         BigDecimal valorBruto = BigDecimal.ZERO;
+        BigDecimal valorDescontoItens = BigDecimal.ZERO;
         Produto produtoEnvaseParaBonificacao = null;
         BigDecimal precoEnvaseParaBonificacao = null;
 
@@ -75,24 +77,41 @@ public class VendaService {
             Produto produto = produtoRepository.findById(itemDto.produtoId())
                     .orElseThrow(() -> new EntityNotFoundException("Produto nao encontrado: " + itemDto.produtoId()));
 
+            BigDecimal percentualDesconto = itemDto.percentualDesconto() != null ? itemDto.percentualDesconto() : BigDecimal.ZERO;
+            if (percentualDesconto.compareTo(BigDecimal.ZERO) < 0 || percentualDesconto.compareTo(new BigDecimal("100")) > 0) {
+                throw new RegraNegocioException("O desconto do item precisa estar entre 0% e 100%");
+            }
+
             // usa o preco personalizado do cliente pra esse produto, se existir - senao cai no preco padrao
             BigDecimal precoUnitario = precoClienteService.precoEfetivo(produto, cliente);
-            BigDecimal subtotal = precoUnitario.multiply(BigDecimal.valueOf(itemDto.quantidade()));
+            BigDecimal subtotalBruto = precoUnitario.multiply(BigDecimal.valueOf(itemDto.quantidade()));
+            BigDecimal valorDescontoItem = subtotalBruto.multiply(percentualDesconto)
+                    .divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
+            BigDecimal subtotal = subtotalBruto.subtract(valorDescontoItem);
+
             ItemVenda item = ItemVenda.builder()
                     .venda(venda)
                     .produto(produto)
                     .quantidade(itemDto.quantidade())
                     .precoUnitario(precoUnitario)
+                    .percentualDesconto(percentualDesconto)
+                    .valorDesconto(valorDescontoItem)
                     .subtotal(subtotal)
                     .build();
             venda.getItens().add(item);
-            valorBruto = valorBruto.add(subtotal);
+            valorBruto = valorBruto.add(subtotalBruto);
+            valorDescontoItens = valorDescontoItens.add(valorDescontoItem);
 
             if (produto.isContaComoEnvase()) {
                 produtoEnvaseParaBonificacao = produto;
                 precoEnvaseParaBonificacao = precoUnitario;
             }
         }
+
+        // valor dos itens ja liquido do desconto individual - avaria/bonificacao (abaixo)
+        // sao descontos adicionais, calculados sobre o preco cheio do galao (sem entrar
+        // no desconto % do item, pra nao acumular dois descontos sobre o mesmo galao)
+        BigDecimal valorBrutoLiquido = valorBruto.subtract(valorDescontoItens);
 
         BigDecimal valorAvaria = BigDecimal.ZERO;
         BigDecimal valorBonificado = BigDecimal.ZERO;
@@ -108,17 +127,19 @@ public class VendaService {
                         .multiply(BigDecimal.valueOf(dto.quantidadeBonificados()));
             }
 
-            if (valorAvaria.add(valorBonificado).compareTo(valorBruto) > 0) {
+            if (valorAvaria.add(valorBonificado).compareTo(valorBrutoLiquido) > 0) {
                 throw new RegraNegocioException("O desconto de avaria e bonificação não pode ser maior que o valor total da venda");
             }
         }
 
         venda.setValorBruto(valorBruto);
+        venda.setValorDescontoItens(valorDescontoItens);
         venda.setValorAvaria(valorAvaria);
         venda.setValorBonificado(valorBonificado);
-        // valor efetivamente cobrado do cliente: avaria e bonificacao ja saem descontadas do total,
-        // nao sao so valores informativos - reduzem de fato o que entra no caixa
-        BigDecimal valorTotal = valorBruto.subtract(valorAvaria).subtract(valorBonificado);
+        // valor efetivamente cobrado do cliente: descontos de item, avaria e bonificacao
+        // ja saem descontados do total, nao sao so valores informativos - reduzem de fato
+        // o que entra no caixa
+        BigDecimal valorTotal = valorBrutoLiquido.subtract(valorAvaria).subtract(valorBonificado).max(BigDecimal.ZERO);
         venda.setValorTotal(valorTotal);
 
         // pagamento pode ser dividido entre especie, PIX e fiado - os tres juntos precisam bater com o total

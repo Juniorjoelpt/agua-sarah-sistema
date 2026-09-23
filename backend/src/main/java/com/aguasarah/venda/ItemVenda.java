@@ -33,5 +33,12 @@ public class ItemVenda {
 
     private Integer quantidade;
     private BigDecimal precoUnitario; // copiado do produto no momento da venda
-    private BigDecimal subtotal;
+
+    @Builder.Default
+    private BigDecimal percentualDesconto = BigDecimal.ZERO; // 0-100, desconto so deste item
+
+    @Builder.Default
+    private BigDecimal valorDesconto = BigDecimal.ZERO; // valor em R$ correspondente ao percentual acima
+
+    private BigDecimal subtotal; // ja liquido - quantidade x precoUnitario, menos o valorDesconto
 }

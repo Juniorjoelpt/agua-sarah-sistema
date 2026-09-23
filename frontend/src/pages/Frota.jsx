@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Truck, User, Pencil, History, CalendarDays } from 'lucide-react';
-import { Card, Field, TextInput, Segmented, ErrorBanner, Loading, Badge, EmptyState } from '../components/ui';
+import { Card, Field, TextInput, Segmented, ErrorBanner, Loading, Badge, EmptyState, MoneyInput } from '../components/ui';
 import Modal from '../components/Modal';
 import { C, DISPLAY_FONT } from '../theme';
 import { frotaApi } from '../api/frota';
@@ -353,7 +353,7 @@ export default function Frota() {
         </div>
         <div className="mt-3">
           <Field label="Valor de venda por galão (para o caminhão)">
-            <TextInput type="number" step="0.01" placeholder="Ex: 8,00" style={{ maxWidth: 180 }} value={carregamentoForm.precoVenda} onChange={(e) => setCarregamentoForm({ ...carregamentoForm, precoVenda: e.target.value })} />
+            <MoneyInput style={{ maxWidth: 180 }} value={carregamentoForm.precoVenda} onChange={(v) => setCarregamentoForm({ ...carregamentoForm, precoVenda: v })} />
           </Field>
           <div style={{ fontSize: 11, color: C.textMuted, marginTop: 4 }}>
             O caminhão compra como um cliente final — esse valor pode ser diferente do preço de envase praticado no PDV.
@@ -387,8 +387,8 @@ export default function Frota() {
             <div className="grid grid-cols-2 gap-4">
               <Field label="Quantidade de avaria"><TextInput type="number" value={prestacaoForm.quantidadeAvaria} onChange={(e) => setPrestacaoForm({ ...prestacaoForm, quantidadeAvaria: e.target.value })} /></Field>
               <Field label="Galões devolvidos"><TextInput type="number" value={prestacaoForm.quantidadeDevolvida} onChange={(e) => setPrestacaoForm({ ...prestacaoForm, quantidadeDevolvida: e.target.value })} /></Field>
-              <Field label="Recebido em espécie"><TextInput type="number" step="0.01" value={prestacaoForm.valorRecebidoEspecie} onChange={(e) => setPrestacaoForm({ ...prestacaoForm, valorRecebidoEspecie: e.target.value })} /></Field>
-              <Field label="Recebido em PIX"><TextInput type="number" step="0.01" value={prestacaoForm.valorRecebidoPix} onChange={(e) => setPrestacaoForm({ ...prestacaoForm, valorRecebidoPix: e.target.value })} /></Field>
+              <Field label="Recebido em espécie"><MoneyInput value={prestacaoForm.valorRecebidoEspecie} onChange={(v) => setPrestacaoForm({ ...prestacaoForm, valorRecebidoEspecie: v })} /></Field>
+              <Field label="Recebido em PIX"><MoneyInput value={prestacaoForm.valorRecebidoPix} onChange={(v) => setPrestacaoForm({ ...prestacaoForm, valorRecebidoPix: v })} /></Field>
             </div>
 
             <div className="mt-4 pt-4" style={{ borderTop: `1px solid ${C.border}` }}>
@@ -408,7 +408,7 @@ export default function Frota() {
                   <Field label="Descrição"><TextInput placeholder="Ex: Combustível" value={novaDespesa.descricao} onChange={(e) => setNovaDespesa({ ...novaDespesa, descricao: e.target.value })} /></Field>
                 </div>
                 <div style={{ width: 110 }}>
-                  <Field label="Valor"><TextInput type="number" step="0.01" value={novaDespesa.valor} onChange={(e) => setNovaDespesa({ ...novaDespesa, valor: e.target.value })} /></Field>
+                  <Field label="Valor"><MoneyInput value={novaDespesa.valor} onChange={(v) => setNovaDespesa({ ...novaDespesa, valor: v })} /></Field>
                 </div>
                 <button
                   type="button"
