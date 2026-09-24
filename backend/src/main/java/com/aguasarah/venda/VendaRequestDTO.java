@@ -14,9 +14,11 @@ public record VendaRequestDTO(
         BigDecimal valorRecebidoEspecie,
         BigDecimal valorRecebidoPix,
         BigDecimal valorFiado, // vira uma ContaReceber - exige cliente cadastrado (validado no service)
-        @NotNull Ocorrencia ocorrencia,
-        Integer quantidadeAvarias, // obrigatorio sempre que ocorrencia != NENHUMA (validado no service)
-        Integer quantidadeBonificados, // obrigatorio so quando ocorrencia = AVARIA_PRODUCAO - independente da quantidadeAvarias
+        // as duas quantidades sao independentes - uma venda pode ter avaria do cliente
+        // e avaria de producao ao mesmo tempo (validado no service)
+        Integer quantidadeAvariaCliente,
+        Integer quantidadeAvariaProducao,
+        Integer quantidadeBonificados, // obrigatorio so quando quantidadeAvariaProducao > 0 - independente da quantidade
         String observacao, // texto livre, opcional
         @NotEmpty @Valid List<ItemVendaRequestDTO> itens
 ) {

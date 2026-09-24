@@ -7,7 +7,6 @@ import com.aguasarah.despesa.Despesa;
 import com.aguasarah.despesa.DespesaRepository;
 import com.aguasarah.usuario.Usuario;
 import com.aguasarah.usuario.UsuarioRepository;
-import com.aguasarah.venda.Ocorrencia;
 import com.aguasarah.venda.Venda;
 import com.aguasarah.venda.VendaRepository;
 import jakarta.persistence.EntityNotFoundException;
@@ -92,7 +91,6 @@ public class CaixaService {
         BigDecimal totalPix = somaCampoVendas(vendas, Venda::getValorRecebidoPix);
         BigDecimal totalDespesas = despesas.stream().map(Despesa::getValor).reduce(BigDecimal.ZERO, BigDecimal::add);
         int totalGaloesBonificados = vendas.stream()
-                .filter(v -> v.getOcorrencia() == Ocorrencia.AVARIA_PRODUCAO)
                 .mapToInt(v -> v.getQuantidadeBonificados() != null ? v.getQuantidadeBonificados() : 0)
                 .sum();
 

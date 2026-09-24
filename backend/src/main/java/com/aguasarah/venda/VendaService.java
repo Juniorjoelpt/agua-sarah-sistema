@@ -43,14 +43,18 @@ public class VendaService {
             throw new RegraNegocioException("Nao e possivel vender sem um caixa aberto");
         }
 
-        if (dto.ocorrencia() != Ocorrencia.NENHUMA
-                && (dto.quantidadeAvarias() == null || dto.quantidadeAvarias() <= 0)) {
-            throw new RegraNegocioException("Informe a quantidade de galões com avaria");
+        int quantidadeAvariaCliente = dto.quantidadeAvariaCliente() != null ? dto.quantidadeAvariaCliente() : 0;
+        int quantidadeAvariaProducao = dto.quantidadeAvariaProducao() != null ? dto.quantidadeAvariaProducao() : 0;
+        int quantidadeBonificados = dto.quantidadeBonificados() != null ? dto.quantidadeBonificados() : 0;
+
+        if (quantidadeAvariaCliente < 0 || quantidadeAvariaProducao < 0 || quantidadeBonificados < 0) {
+            throw new RegraNegocioException("Quantidade de avaria/bonificação não pode ser negativa");
         }
 
-        if (dto.ocorrencia() == Ocorrencia.AVARIA_PRODUCAO
-                && (dto.quantidadeBonificados() == null || dto.quantidadeBonificados() <= 0)) {
-            throw new RegraNegocioException("Informe a quantidade de galões bonificados");
+        // bonificacao so faz sentido havendo avaria de producao nesta venda (pode
+        // bonificar menos galoes do que os avariados, mas nao bonificar sem nenhuma avaria)
+        if (quantidadeBonificados > 0 && quantidadeAvariaProducao <= 0) {
+            throw new RegraNegocioException("Informe a quantidade de galões com avaria de produção para gerar bonificação");
         }
 
         Cliente cliente = dto.clienteId() != null ? clienteRepository.findById(dto.clienteId())
@@ -61,9 +65,9 @@ public class VendaService {
                 .cliente(cliente)
                 .usuario(usuarioLogado())
                 .dataHora(LocalDateTime.now())
-                .ocorrencia(dto.ocorrencia())
-                .quantidadeAvarias(dto.ocorrencia() != Ocorrencia.NENHUMA ? dto.quantidadeAvarias() : null)
-                .quantidadeBonificados(dto.ocorrencia() == Ocorrencia.AVARIA_PRODUCAO ? dto.quantidadeBonificados() : null)
+                .quantidadeAvariaCliente(quantidadeAvariaCliente)
+                .quantidadeAvariaProducao(quantidadeAvariaProducao)
+                .quantidadeBonificados(quantidadeBonificados)
                 .observacao(dto.observacao())
                 .itens(new ArrayList<>())
                 .build();
@@ -113,27 +117,32 @@ public class VendaService {
         // no desconto % do item, pra nao acumular dois descontos sobre o mesmo galao)
         BigDecimal valorBrutoLiquido = valorBruto.subtract(valorDescontoItens);
 
-        BigDecimal valorAvaria = BigDecimal.ZERO;
+        BigDecimal valorAvariaCliente = BigDecimal.ZERO;
+        BigDecimal valorAvariaProducao = BigDecimal.ZERO;
         BigDecimal valorBonificado = BigDecimal.ZERO;
 
-        if (dto.ocorrencia() != Ocorrencia.NENHUMA) {
+        if (quantidadeAvariaCliente > 0 || quantidadeAvariaProducao > 0) {
             if (produtoEnvaseParaBonificacao == null) {
                 throw new RegraNegocioException("Nao ha produto de envase nesta venda para calcular a avaria");
             }
-            valorAvaria = precoEnvaseParaBonificacao.multiply(BigDecimal.valueOf(dto.quantidadeAvarias()));
+            valorAvariaCliente = precoEnvaseParaBonificacao.multiply(BigDecimal.valueOf(quantidadeAvariaCliente));
+            valorAvariaProducao = precoEnvaseParaBonificacao.multiply(BigDecimal.valueOf(quantidadeAvariaProducao));
 
-            if (dto.ocorrencia() == Ocorrencia.AVARIA_PRODUCAO) {
-                valorBonificado = precoEnvaseParaBonificacao
-                        .multiply(BigDecimal.valueOf(dto.quantidadeBonificados()));
+            if (quantidadeBonificados > 0) {
+                valorBonificado = precoEnvaseParaBonificacao.multiply(BigDecimal.valueOf(quantidadeBonificados));
             }
 
-            if (valorAvaria.add(valorBonificado).compareTo(valorBrutoLiquido) > 0) {
+            if (valorAvariaCliente.add(valorAvariaProducao).add(valorBonificado).compareTo(valorBrutoLiquido) > 0) {
                 throw new RegraNegocioException("O desconto de avaria e bonificação não pode ser maior que o valor total da venda");
             }
         }
 
+        BigDecimal valorAvaria = valorAvariaCliente.add(valorAvariaProducao);
+
         venda.setValorBruto(valorBruto);
         venda.setValorDescontoItens(valorDescontoItens);
+        venda.setValorAvariaCliente(valorAvariaCliente);
+        venda.setValorAvariaProducao(valorAvariaProducao);
         venda.setValorAvaria(valorAvaria);
         venda.setValorBonificado(valorBonificado);
         // valor efetivamente cobrado do cliente: descontos de item, avaria e bonificacao

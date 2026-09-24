@@ -12,12 +12,6 @@ import { rotuloPagamento } from '../utils/pagamento';
 
 const VAZIO = { nome: '', tipo: 'REVENDEDOR', telefone: '', bairro: '', cidade: '', endereco: '', ativo: true };
 
-const OCORRENCIA_LABEL = {
-  NENHUMA: null,
-  AVARIA_CLIENTE: 'Avaria - cliente',
-  AVARIA_PRODUCAO: 'Avaria - produção (bonificada)',
-};
-
 function formatarDataHora(iso) {
   return new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
@@ -155,8 +149,8 @@ export default function Clientes() {
   if (carregando) return <Loading />;
 
   const totalGasto = vendas.reduce((s, v) => s + v.valorTotal, 0);
-  const totalGaloesBonificados = vendas.filter((v) => v.ocorrencia === 'AVARIA_PRODUCAO').reduce((s, v) => s + (v.quantidadeBonificados || 0), 0);
-  const totalGaloesAvariaCliente = vendas.filter((v) => v.ocorrencia === 'AVARIA_CLIENTE').reduce((s, v) => s + (v.quantidadeAvarias || 0), 0);
+  const totalGaloesBonificados = vendas.reduce((s, v) => s + (v.quantidadeBonificados || 0), 0);
+  const totalGaloesAvariaCliente = vendas.reduce((s, v) => s + (v.quantidadeAvariaCliente || 0), 0);
   const saldoDevedor = contasReceber.filter((c) => c.status !== 'PAGA').reduce((s, c) => s + (c.valorOriginal - c.valorPago), 0);
 
   return (
@@ -247,22 +241,19 @@ export default function Clientes() {
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
                     <Badge tone="neutral">{rotuloPagamento(v)}</Badge>
-                    {OCORRENCIA_LABEL[v.ocorrencia] && (
-                      <Badge tone={v.ocorrencia === 'AVARIA_PRODUCAO' ? 'amber' : 'neutral'}>
-                        {OCORRENCIA_LABEL[v.ocorrencia]}
-                      </Badge>
-                    )}
+                    {v.quantidadeAvariaProducao > 0 && <Badge tone="amber">Avaria - produção (bonificada)</Badge>}
+                    {v.quantidadeAvariaCliente > 0 && <Badge tone="neutral">Avaria - cliente</Badge>}
                   </div>
-                  {v.ocorrencia === 'AVARIA_PRODUCAO' && (
+                  {v.quantidadeAvariaProducao > 0 && (
                     <div className="flex items-center gap-2 mt-2 px-2 py-1.5 rounded" style={{ background: C.amberLight, color: '#7A4A1F', fontSize: 12 }}>
                       <AlertTriangle size={13} />
-                      {v.quantidadeAvarias} galões avariados ({moeda(v.valorAvaria)}) · {v.quantidadeBonificados} bonificados ({moeda(v.valorBonificado)})
+                      {v.quantidadeAvariaProducao} galões avariados na produção ({moeda(v.valorAvariaProducao)}) · {v.quantidadeBonificados} bonificados ({moeda(v.valorBonificado)})
                     </div>
                   )}
-                  {v.ocorrencia === 'AVARIA_CLIENTE' && (
+                  {v.quantidadeAvariaCliente > 0 && (
                     <div className="flex items-center gap-2 mt-2 px-2 py-1.5 rounded" style={{ background: C.bg, color: C.textMuted, fontSize: 12 }}>
                       <AlertTriangle size={13} />
-                      {v.quantidadeAvarias} galões com avaria causada pelo cliente ({moeda(v.valorAvaria)} descontado)
+                      {v.quantidadeAvariaCliente} galões com avaria causada pelo cliente ({moeda(v.valorAvariaCliente)} descontado)
                     </div>
                   )}
                 </div>

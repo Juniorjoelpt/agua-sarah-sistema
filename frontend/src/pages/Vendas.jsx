@@ -27,9 +27,9 @@ export default function Vendas() {
   const [valorPixInput, setValorPixInput] = useState('');
   const [valorFiadoInput, setValorFiadoInput] = useState('');
   const [dinheiroEntregue, setDinheiroEntregue] = useState('');
-  const [ocorrencia, setOcorrencia] = useState('NENHUMA');
-  const [quantidadeAvarias, setQuantidadeAvarias] = useState('1');
-  const [quantidadeBonificados, setQuantidadeBonificados] = useState('1');
+  const [quantidadeAvariaCliente, setQuantidadeAvariaCliente] = useState('');
+  const [quantidadeAvariaProducao, setQuantidadeAvariaProducao] = useState('');
+  const [quantidadeBonificados, setQuantidadeBonificados] = useState('');
   const [observacao, setObservacao] = useState('');
 
   const [vendasHoje, setVendasHoje] = useState([]);
@@ -144,12 +144,17 @@ export default function Vendas() {
   const totalLiquidoItens = totalBruto - totalDescontoItens;
 
   // mesma regra do backend: avaria e bonificacao = galoes x preco do produto de envase presente no carrinho
-  // (calculado sobre o preco cheio, sem o desconto % do item - pra nao acumular dois descontos)
+  // (calculado sobre o preco cheio, sem o desconto % do item - pra nao acumular dois descontos).
+  // avaria do cliente e avaria de producao sao independentes - uma venda pode ter as duas ao mesmo tempo
   const produtoEnvaseNoCarrinho = itens.map((it) => produtoPorId(it.produtoId)).find((p) => p?.contaComoEnvase);
-  const valorAvaria = ocorrencia !== 'NENHUMA' && produtoEnvaseNoCarrinho
-    ? precoEfetivo(produtoEnvaseNoCarrinho) * Number(quantidadeAvarias || 0)
+  const valorAvariaCliente = produtoEnvaseNoCarrinho
+    ? precoEfetivo(produtoEnvaseNoCarrinho) * Number(quantidadeAvariaCliente || 0)
     : 0;
-  const valorBonificado = ocorrencia === 'AVARIA_PRODUCAO' && produtoEnvaseNoCarrinho
+  const valorAvariaProducao = produtoEnvaseNoCarrinho
+    ? precoEfetivo(produtoEnvaseNoCarrinho) * Number(quantidadeAvariaProducao || 0)
+    : 0;
+  const valorAvaria = valorAvariaCliente + valorAvariaProducao;
+  const valorBonificado = Number(quantidadeAvariaProducao || 0) > 0 && produtoEnvaseNoCarrinho
     ? precoEfetivo(produtoEnvaseNoCarrinho) * Number(quantidadeBonificados || 0)
     : 0;
   const total = Math.max(totalLiquidoItens - valorAvaria - valorBonificado, 0);
@@ -185,9 +190,9 @@ export default function Vendas() {
         valorRecebidoEspecie: valorEspecieFinal,
         valorRecebidoPix: valorPixFinal,
         valorFiado: valorFiadoFinal,
-        ocorrencia,
-        quantidadeAvarias: ocorrencia !== 'NENHUMA' ? Number(quantidadeAvarias) : null,
-        quantidadeBonificados: ocorrencia === 'AVARIA_PRODUCAO' ? Number(quantidadeBonificados) : null,
+        quantidadeAvariaCliente: Number(quantidadeAvariaCliente || 0),
+        quantidadeAvariaProducao: Number(quantidadeAvariaProducao || 0),
+        quantidadeBonificados: Number(quantidadeAvariaProducao || 0) > 0 ? Number(quantidadeBonificados || 0) : 0,
         observacao: observacao || null,
         itens: itens
           .filter((it) => it.produtoId)
@@ -199,9 +204,9 @@ export default function Vendas() {
       setTrocoParaImprimir(troco > 0 ? troco : 0);
       setPerguntarImpressao(true);
       setItens([{ produtoId: '', quantidade: 1, percentualDesconto: '' }]);
-      setOcorrencia('NENHUMA');
-      setQuantidadeAvarias('1');
-      setQuantidadeBonificados('1');
+      setQuantidadeAvariaCliente('');
+      setQuantidadeAvariaProducao('');
+      setQuantidadeBonificados('');
       setObservacao('');
       setValorEspecieInput('');
       setValorPixInput('');
@@ -300,33 +305,27 @@ export default function Vendas() {
           </div>
 
           <div className="mt-5">
-            <div style={{ fontSize: 12, color: C.textMuted, marginBottom: 6 }}>Ocorrência de avaria</div>
-            <Segmented
-              options={[['NENHUMA', 'Sem avaria'], ['AVARIA_CLIENTE', 'Avaria - cliente'], ['AVARIA_PRODUCAO', 'Avaria - produção']]}
-              value={ocorrencia}
-              onChange={setOcorrencia}
-            />
-            {ocorrencia !== 'NENHUMA' && (
+            <div style={{ fontSize: 12, color: C.textMuted, marginBottom: 6 }}>Avarias (opcional — pode ter as duas ao mesmo tempo)</div>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Galões com avaria do cliente">
+                <TextInput type="number" min="0" value={quantidadeAvariaCliente} onChange={(e) => setQuantidadeAvariaCliente(e.target.value)} placeholder="0" />
+              </Field>
+              <Field label="Galões com avaria de produção">
+                <TextInput type="number" min="0" value={quantidadeAvariaProducao} onChange={(e) => setQuantidadeAvariaProducao(e.target.value)} placeholder="0" />
+              </Field>
+            </div>
+            {Number(quantidadeAvariaProducao || 0) > 0 && (
               <div className="mt-3">
-                <Field label="Quantidade de galões com avaria">
-                  <TextInput type="number" min="1" style={{ maxWidth: 140 }} value={quantidadeAvarias} onChange={(e) => setQuantidadeAvarias(e.target.value)} />
+                <Field label="Quantidade de galões bonificados">
+                  <TextInput type="number" min="0" style={{ maxWidth: 140 }} value={quantidadeBonificados} onChange={(e) => setQuantidadeBonificados(e.target.value)} />
                 </Field>
-                {ocorrencia === 'AVARIA_PRODUCAO' ? (
-                  <>
-                    <div className="mt-3">
-                      <Field label="Quantidade de galões bonificados">
-                        <TextInput type="number" min="1" style={{ maxWidth: 140 }} value={quantidadeBonificados} onChange={(e) => setQuantidadeBonificados(e.target.value)} />
-                      </Field>
-                    </div>
-                    <div className="flex items-center gap-2 mt-2 px-3 py-2 rounded" style={{ background: C.amberLight, color: '#7A4A1F', fontSize: 12 }}>
-                      <AlertTriangle size={14} /> A bonificação sai do total da venda automaticamente — não precisa ser igual à quantidade de avaria
-                    </div>
-                  </>
-                ) : (
-                  <div className="flex items-center gap-2 mt-2 px-3 py-2 rounded" style={{ background: C.amberLight, color: '#7A4A1F', fontSize: 12 }}>
-                    <AlertTriangle size={14} /> Esses galões saem do total da venda automaticamente
-                  </div>
-                )}
+              </div>
+            )}
+            {(Number(quantidadeAvariaCliente || 0) > 0 || Number(quantidadeAvariaProducao || 0) > 0) && (
+              <div className="flex items-center gap-2 mt-2 px-3 py-2 rounded" style={{ background: C.amberLight, color: '#7A4A1F', fontSize: 12 }}>
+                <AlertTriangle size={14} />
+                Esses galões saem do total da venda automaticamente
+                {Number(quantidadeAvariaProducao || 0) > 0 && ' — a bonificação também, e não precisa ser igual à quantidade de avaria de produção'}
               </div>
             )}
           </div>
@@ -459,8 +458,8 @@ export default function Vendas() {
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <Badge tone="neutral">{rotuloPagamento(v)}</Badge>
-                    {v.ocorrencia === 'AVARIA_PRODUCAO' && <Badge tone="amber">Avaria produção</Badge>}
-                    {v.ocorrencia === 'AVARIA_CLIENTE' && <Badge tone="neutral">Avaria cliente</Badge>}
+                    {v.quantidadeAvariaProducao > 0 && <Badge tone="amber">Avaria produção</Badge>}
+                    {v.quantidadeAvariaCliente > 0 && <Badge tone="neutral">Avaria cliente</Badge>}
                     <span style={{ fontWeight: 600, color: C.textDark, minWidth: 64, textAlign: 'right' }}>
                       {v.valorTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                     </span>

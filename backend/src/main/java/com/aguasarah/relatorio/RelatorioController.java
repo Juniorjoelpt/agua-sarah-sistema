@@ -13,7 +13,6 @@ import com.aguasarah.frota.Carregamento;
 import com.aguasarah.frota.CarregamentoRepository;
 import com.aguasarah.frota.PrestacaoContasRepository;
 import com.aguasarah.venda.ItemVenda;
-import com.aguasarah.venda.Ocorrencia;
 import com.aguasarah.venda.Venda;
 import com.aguasarah.venda.VendaRepository;
 import lombok.RequiredArgsConstructor;
@@ -158,13 +157,11 @@ public class RelatorioController {
                 .sum();
 
         int totalGaloesBonificados = vendas.stream()
-                .filter(v -> v.getOcorrencia() == Ocorrencia.AVARIA_PRODUCAO)
                 .mapToInt(v -> v.getQuantidadeBonificados() != null ? v.getQuantidadeBonificados() : 0)
                 .sum();
 
         int totalGaloesAvariaClientePdv = vendas.stream()
-                .filter(v -> v.getOcorrencia() == Ocorrencia.AVARIA_CLIENTE)
-                .mapToInt(v -> v.getQuantidadeAvarias() != null ? v.getQuantidadeAvarias() : 0)
+                .mapToInt(v -> v.getQuantidadeAvariaCliente() != null ? v.getQuantidadeAvariaCliente() : 0)
                 .sum();
 
         // galoes que saem da fonte carregados nos caminhoes tambem contam como envase,

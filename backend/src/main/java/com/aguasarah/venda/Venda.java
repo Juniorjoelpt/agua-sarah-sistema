@@ -50,23 +50,33 @@ public class Venda {
     // (status, pagamentos parciais) e a ContaReceber gerada a partir desta venda
     private BigDecimal valorFiado;
 
-    @Enumerated(EnumType.STRING)
-    private Ocorrencia ocorrencia;
+    // uma mesma venda pode ter avaria do cliente E avaria de producao ao mesmo tempo
+    // (ex: 2 galoes quebrados pelo cliente + 1 com defeito de fabrica) - por isso as
+    // duas quantidades sao independentes, em vez de uma unica ocorrencia exclusiva
+    @Builder.Default
+    private Integer quantidadeAvariaCliente = 0; // galoes quebrados/perdidos pelo cliente - desconta do total, sem bonificacao
 
-    // quantidade de galoes com avaria - preenchida sempre que ocorrencia != NENHUMA, so para historico
-    private Integer quantidadeAvarias;
+    @Builder.Default
+    private Integer quantidadeAvariaProducao = 0; // galoes com defeito de fabrica - desconta do total e gera bonificacao
 
-    // quantidade de galoes dados de bonificacao - independente da quantidade de avarias
-    // (a empresa pode optar por bonificar menos galoes do que os avariados); so se aplica
-    // quando ocorrencia = AVARIA_PRODUCAO
-    private Integer quantidadeBonificados;
+    // quantidade de galoes dados de bonificacao - independente da quantidadeAvariaProducao
+    // (a empresa pode optar por bonificar menos galoes do que os avariados de producao);
+    // so se aplica quando ha avaria de producao nesta venda
+    @Builder.Default
+    private Integer quantidadeBonificados = 0;
 
     private BigDecimal valorBruto;      // soma dos itens, antes de qualquer desconto
 
     @Builder.Default
     private BigDecimal valorDescontoItens = BigDecimal.ZERO; // soma dos descontos % aplicados item a item (ver ItemVenda.valorDesconto)
 
-    private BigDecimal valorAvaria;     // quantidadeAvarias x preco do galao - desconto por avaria (cliente ou producao)
+    @Builder.Default
+    private BigDecimal valorAvariaCliente = BigDecimal.ZERO; // quantidadeAvariaCliente x preco do galao
+
+    @Builder.Default
+    private BigDecimal valorAvariaProducao = BigDecimal.ZERO; // quantidadeAvariaProducao x preco do galao
+
+    private BigDecimal valorAvaria;     // valorAvariaCliente + valorAvariaProducao - desconto total por avaria
     private BigDecimal valorBonificado; // quantidadeBonificados x preco do galao - desconto adicional, so na avaria de producao
     private BigDecimal valorTotal;      // valorBruto - valorDescontoItens - valorAvaria - valorBonificado (o que o cliente efetivamente paga)
 

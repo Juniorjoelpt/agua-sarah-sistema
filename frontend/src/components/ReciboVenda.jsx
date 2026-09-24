@@ -23,11 +23,6 @@ function formatarDataHora(iso) {
   return new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
-const OCORRENCIA_LABEL = {
-  AVARIA_CLIENTE: 'Avaria (cliente)',
-  AVARIA_PRODUCAO: 'Avaria (produção)',
-};
-
 export default function ReciboVenda({ venda, troco }) {
   if (!venda) return null;
 
@@ -80,13 +75,16 @@ export default function ReciboVenda({ venda, troco }) {
               <span>-{moeda(venda.valorDescontoItens)}</span>
             </div>
           )}
-          {venda.ocorrencia && venda.ocorrencia !== 'NENHUMA' && (
-            <div style={{ fontSize: 11 }}>{OCORRENCIA_LABEL[venda.ocorrencia]}{venda.quantidadeAvarias ? ` - ${venda.quantidadeAvarias} galão(ões)` : ''}</div>
+          {venda.quantidadeAvariaCliente > 0 && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
+              <span>Avaria (cliente) - {venda.quantidadeAvariaCliente} galão(ões)</span>
+              <span>-{moeda(venda.valorAvariaCliente)}</span>
+            </div>
           )}
-          {venda.valorAvaria > 0 && (
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span>Desconto avaria</span>
-              <span>-{moeda(venda.valorAvaria)}</span>
+          {venda.quantidadeAvariaProducao > 0 && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
+              <span>Avaria (produção) - {venda.quantidadeAvariaProducao} galão(ões)</span>
+              <span>-{moeda(venda.valorAvariaProducao)}</span>
             </div>
           )}
           {venda.valorBonificado > 0 && (
