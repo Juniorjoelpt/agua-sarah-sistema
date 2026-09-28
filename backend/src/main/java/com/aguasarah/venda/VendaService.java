@@ -72,8 +72,12 @@ public class VendaService {
                 .itens(new ArrayList<>())
                 .build();
 
+        BigDecimal percentualDesconto = dto.percentualDesconto() != null ? dto.percentualDesconto() : BigDecimal.ZERO;
+        if (percentualDesconto.compareTo(BigDecimal.ZERO) < 0 || percentualDesconto.compareTo(new BigDecimal("100")) > 0) {
+            throw new RegraNegocioException("O desconto da venda precisa estar entre 0% e 100%");
+        }
+
         BigDecimal valorBruto = BigDecimal.ZERO;
-        BigDecimal valorDescontoItens = BigDecimal.ZERO;
         Produto produtoEnvaseParaBonificacao = null;
         BigDecimal precoEnvaseParaBonificacao = null;
 
@@ -81,41 +85,25 @@ public class VendaService {
             Produto produto = produtoRepository.findById(itemDto.produtoId())
                     .orElseThrow(() -> new EntityNotFoundException("Produto nao encontrado: " + itemDto.produtoId()));
 
-            BigDecimal percentualDesconto = itemDto.percentualDesconto() != null ? itemDto.percentualDesconto() : BigDecimal.ZERO;
-            if (percentualDesconto.compareTo(BigDecimal.ZERO) < 0 || percentualDesconto.compareTo(new BigDecimal("100")) > 0) {
-                throw new RegraNegocioException("O desconto do item precisa estar entre 0% e 100%");
-            }
-
             // usa o preco personalizado do cliente pra esse produto, se existir - senao cai no preco padrao
             BigDecimal precoUnitario = precoClienteService.precoEfetivo(produto, cliente);
-            BigDecimal subtotalBruto = precoUnitario.multiply(BigDecimal.valueOf(itemDto.quantidade()));
-            BigDecimal valorDescontoItem = subtotalBruto.multiply(percentualDesconto)
-                    .divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
-            BigDecimal subtotal = subtotalBruto.subtract(valorDescontoItem);
+            BigDecimal subtotal = precoUnitario.multiply(BigDecimal.valueOf(itemDto.quantidade()));
 
             ItemVenda item = ItemVenda.builder()
                     .venda(venda)
                     .produto(produto)
                     .quantidade(itemDto.quantidade())
                     .precoUnitario(precoUnitario)
-                    .percentualDesconto(percentualDesconto)
-                    .valorDesconto(valorDescontoItem)
                     .subtotal(subtotal)
                     .build();
             venda.getItens().add(item);
-            valorBruto = valorBruto.add(subtotalBruto);
-            valorDescontoItens = valorDescontoItens.add(valorDescontoItem);
+            valorBruto = valorBruto.add(subtotal);
 
             if (produto.isContaComoEnvase()) {
                 produtoEnvaseParaBonificacao = produto;
                 precoEnvaseParaBonificacao = precoUnitario;
             }
         }
-
-        // valor dos itens ja liquido do desconto individual - avaria/bonificacao (abaixo)
-        // sao descontos adicionais, calculados sobre o preco cheio do galao (sem entrar
-        // no desconto % do item, pra nao acumular dois descontos sobre o mesmo galao)
-        BigDecimal valorBrutoLiquido = valorBruto.subtract(valorDescontoItens);
 
         BigDecimal valorAvariaCliente = BigDecimal.ZERO;
         BigDecimal valorAvariaProducao = BigDecimal.ZERO;
@@ -132,23 +120,31 @@ public class VendaService {
                 valorBonificado = precoEnvaseParaBonificacao.multiply(BigDecimal.valueOf(quantidadeBonificados));
             }
 
-            if (valorAvariaCliente.add(valorAvariaProducao).add(valorBonificado).compareTo(valorBrutoLiquido) > 0) {
+            if (valorAvariaCliente.add(valorAvariaProducao).add(valorBonificado).compareTo(valorBruto) > 0) {
                 throw new RegraNegocioException("O desconto de avaria e bonificação não pode ser maior que o valor total da venda");
             }
         }
 
         BigDecimal valorAvaria = valorAvariaCliente.add(valorAvariaProducao);
 
+        // desconto % da venda e calculado por ULTIMO, sobre o que sobra depois de
+        // tirar avaria e bonificacao - assim o cliente nao recebe desconto em cima
+        // de galao que ele ja nao esta pagando
+        BigDecimal valorLiquidoAposAvaria = valorBruto.subtract(valorAvaria).subtract(valorBonificado).max(BigDecimal.ZERO);
+        BigDecimal valorDesconto = valorLiquidoAposAvaria.multiply(percentualDesconto)
+                .divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
+
         venda.setValorBruto(valorBruto);
-        venda.setValorDescontoItens(valorDescontoItens);
         venda.setValorAvariaCliente(valorAvariaCliente);
         venda.setValorAvariaProducao(valorAvariaProducao);
         venda.setValorAvaria(valorAvaria);
         venda.setValorBonificado(valorBonificado);
-        // valor efetivamente cobrado do cliente: descontos de item, avaria e bonificacao
-        // ja saem descontados do total, nao sao so valores informativos - reduzem de fato
-        // o que entra no caixa
-        BigDecimal valorTotal = valorBrutoLiquido.subtract(valorAvaria).subtract(valorBonificado).max(BigDecimal.ZERO);
+        venda.setPercentualDesconto(percentualDesconto);
+        venda.setValorDesconto(valorDesconto);
+        // valor efetivamente cobrado do cliente: avaria, bonificacao e desconto ja
+        // saem descontados do total, nao sao so valores informativos - reduzem de
+        // fato o que entra no caixa
+        BigDecimal valorTotal = valorLiquidoAposAvaria.subtract(valorDesconto).max(BigDecimal.ZERO);
         venda.setValorTotal(valorTotal);
 
         // pagamento pode ser dividido entre especie, PIX e fiado - os tres juntos precisam bater com o total

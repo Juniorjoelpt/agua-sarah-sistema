@@ -65,10 +65,7 @@ public class Venda {
     @Builder.Default
     private Integer quantidadeBonificados = 0;
 
-    private BigDecimal valorBruto;      // soma dos itens, antes de qualquer desconto
-
-    @Builder.Default
-    private BigDecimal valorDescontoItens = BigDecimal.ZERO; // soma dos descontos % aplicados item a item (ver ItemVenda.valorDesconto)
+    private BigDecimal valorBruto;      // soma dos itens pelo preco cheio, antes de qualquer desconto
 
     @Builder.Default
     private BigDecimal valorAvariaCliente = BigDecimal.ZERO; // quantidadeAvariaCliente x preco do galao
@@ -78,7 +75,18 @@ public class Venda {
 
     private BigDecimal valorAvaria;     // valorAvariaCliente + valorAvariaProducao - desconto total por avaria
     private BigDecimal valorBonificado; // quantidadeBonificados x preco do galao - desconto adicional, so na avaria de producao
-    private BigDecimal valorTotal;      // valorBruto - valorDescontoItens - valorAvaria - valorBonificado (o que o cliente efetivamente paga)
+
+    // desconto percentual UNICO da venda (nao e mais por item) - aplicado sobre o
+    // valor que sobra depois de tirar avaria e bonificacao (valorBruto - valorAvaria
+    // - valorBonificado), pra nao dar desconto em cima de galao que o cliente ja
+    // nao esta pagando
+    @Builder.Default
+    private BigDecimal percentualDesconto = BigDecimal.ZERO; // 0-100
+
+    @Builder.Default
+    private BigDecimal valorDesconto = BigDecimal.ZERO; // valor em R$ correspondente ao percentual acima
+
+    private BigDecimal valorTotal;      // valorBruto - valorAvaria - valorBonificado - valorDesconto (o que o cliente efetivamente paga)
 
     @Column(length = 500)
     private String observacao; // texto livre, opcional - qualquer detalhe que o operador queira registrar

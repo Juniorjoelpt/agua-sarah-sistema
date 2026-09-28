@@ -52,29 +52,17 @@ export default function ReciboVenda({ venda, troco }) {
             <span>{moeda(item.precoUnitario)} un.</span>
             <span>{moeda(item.subtotal)}</span>
           </div>
-          {item.percentualDesconto > 0 && (
-            <div style={{ fontSize: 11, display: 'flex', justifyContent: 'space-between' }}>
-              <span>Desconto ({Number(item.percentualDesconto).toLocaleString('pt-BR')}%)</span>
-              <span>-{moeda(item.valorDesconto)}</span>
-            </div>
-          )}
         </div>
       ))}
 
       <div style={linha} />
 
-      {(venda.valorDescontoItens > 0 || venda.valorAvaria > 0 || venda.valorBonificado > 0) && (
+      {(venda.valorDesconto > 0 || venda.valorAvaria > 0 || venda.valorBonificado > 0) && (
         <>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
             <span>Subtotal</span>
             <span>{moeda(venda.valorBruto)}</span>
           </div>
-          {venda.valorDescontoItens > 0 && (
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span>Desconto itens</span>
-              <span>-{moeda(venda.valorDescontoItens)}</span>
-            </div>
-          )}
           {venda.quantidadeAvariaCliente > 0 && (
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
               <span>Avaria (cliente) - {venda.quantidadeAvariaCliente} galão(ões)</span>
@@ -91,6 +79,12 @@ export default function ReciboVenda({ venda, troco }) {
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span>Bonificação</span>
               <span>-{moeda(venda.valorBonificado)}</span>
+            </div>
+          )}
+          {venda.valorDesconto > 0 && (
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span>Desconto ({Number(venda.percentualDesconto).toLocaleString('pt-BR')}%)</span>
+              <span>-{moeda(venda.valorDesconto)}</span>
             </div>
           )}
         </>

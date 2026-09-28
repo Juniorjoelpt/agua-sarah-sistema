@@ -21,7 +21,8 @@ export default function Vendas() {
 
   const [clienteId, setClienteId] = useState('');
   const [precosCliente, setPrecosCliente] = useState({}); // { [produtoId]: precoPersonalizado }
-  const [itens, setItens] = useState([{ produtoId: '', quantidade: 1, percentualDesconto: '' }]);
+  const [itens, setItens] = useState([{ produtoId: '', quantidade: 1 }]);
+  const [percentualDesconto, setPercentualDesconto] = useState('');
   const [modoPagamento, setModoPagamento] = useState('PIX'); // 'PIX' | 'ESPECIE' | 'FIADO' | 'DIVIDIDO'
   const [valorEspecieInput, setValorEspecieInput] = useState('');
   const [valorPixInput, setValorPixInput] = useState('');
@@ -110,7 +111,7 @@ export default function Vendas() {
   }
 
   function adicionarItem() {
-    setItens((prev) => [...prev, { produtoId: '', quantidade: 1, percentualDesconto: '' }]);
+    setItens((prev) => [...prev, { produtoId: '', quantidade: 1 }]);
   }
 
   function removerItem(index) {
@@ -128,23 +129,15 @@ export default function Vendas() {
     return personalizado !== undefined ? personalizado : produto.preco;
   }
 
-  // subtotal do item ANTES do desconto % dele (igual ao backend: valorBruto e a soma disso,
-  // sem entrar o desconto de item nenhum ainda)
+  // subtotal do item pelo preco cheio (sem desconto nenhum ainda)
   function subtotalBrutoItem(it) {
     const produto = produtoPorId(it.produtoId);
     return produto ? precoEfetivo(produto) * Number(it.quantidade || 0) : 0;
   }
-  function valorDescontoItem(it) {
-    const percentual = Number(it.percentualDesconto || 0);
-    return subtotalBrutoItem(it) * (percentual / 100);
-  }
 
   const totalBruto = itens.reduce((soma, it) => soma + subtotalBrutoItem(it), 0);
-  const totalDescontoItens = itens.reduce((soma, it) => soma + valorDescontoItem(it), 0);
-  const totalLiquidoItens = totalBruto - totalDescontoItens;
 
-  // mesma regra do backend: avaria e bonificacao = galoes x preco do produto de envase presente no carrinho
-  // (calculado sobre o preco cheio, sem o desconto % do item - pra nao acumular dois descontos).
+  // mesma regra do backend: avaria e bonificacao = galoes x preco do produto de envase presente no carrinho.
   // avaria do cliente e avaria de producao sao independentes - uma venda pode ter as duas ao mesmo tempo
   const produtoEnvaseNoCarrinho = itens.map((it) => produtoPorId(it.produtoId)).find((p) => p?.contaComoEnvase);
   const valorAvariaCliente = produtoEnvaseNoCarrinho
@@ -157,7 +150,13 @@ export default function Vendas() {
   const valorBonificado = Number(quantidadeAvariaProducao || 0) > 0 && produtoEnvaseNoCarrinho
     ? precoEfetivo(produtoEnvaseNoCarrinho) * Number(quantidadeBonificados || 0)
     : 0;
-  const total = Math.max(totalLiquidoItens - valorAvaria - valorBonificado, 0);
+
+  // desconto % e calculado por ULTIMO, sobre o valor que ja sobrou depois de tirar
+  // avaria e bonificacao - assim o desconto nao incide sobre galao que o cliente
+  // ja nao esta pagando
+  const valorLiquidoAposAvaria = Math.max(totalBruto - valorAvaria - valorBonificado, 0);
+  const valorDesconto = valorLiquidoAposAvaria * (Number(percentualDesconto || 0) / 100);
+  const total = Math.max(valorLiquidoAposAvaria - valorDesconto, 0);
 
   // no modo PIX/Especie/Fiado, o valor cheio vai pro metodo escolhido; no dividido, o operador digita os tres
   const valorEspecieFinal = modoPagamento === 'ESPECIE' ? total : modoPagamento === 'DIVIDIDO' ? Number(valorEspecieInput || 0) : 0;
@@ -193,17 +192,19 @@ export default function Vendas() {
         quantidadeAvariaCliente: Number(quantidadeAvariaCliente || 0),
         quantidadeAvariaProducao: Number(quantidadeAvariaProducao || 0),
         quantidadeBonificados: Number(quantidadeAvariaProducao || 0) > 0 ? Number(quantidadeBonificados || 0) : 0,
+        percentualDesconto: Number(percentualDesconto || 0),
         observacao: observacao || null,
         itens: itens
           .filter((it) => it.produtoId)
-          .map((it) => ({ produtoId: Number(it.produtoId), quantidade: Number(it.quantidade), percentualDesconto: Number(it.percentualDesconto || 0) })),
+          .map((it) => ({ produtoId: Number(it.produtoId), quantidade: Number(it.quantidade) })),
       };
       const venda = await vendasApi.registrar(dto);
       setSucesso(`Venda #${venda.id} registrada com sucesso.${valorFiadoFinal > 0 ? ' Uma conta a receber foi criada para o cliente.' : ''}`);
       setVendaParaImprimir(venda);
       setTrocoParaImprimir(troco > 0 ? troco : 0);
       setPerguntarImpressao(true);
-      setItens([{ produtoId: '', quantidade: 1, percentualDesconto: '' }]);
+      setItens([{ produtoId: '', quantidade: 1 }]);
+      setPercentualDesconto('');
       setQuantidadeAvariaCliente('');
       setQuantidadeAvariaProducao('');
       setQuantidadeBonificados('');
@@ -289,13 +290,6 @@ export default function Vendas() {
                   value={item.quantidade}
                   onChange={(e) => atualizarItem(index, 'quantidade', e.target.value)}
                 />
-                <div style={{ width: 90 }}>
-                  <PercentInput
-                    value={item.percentualDesconto}
-                    onChange={(v) => atualizarItem(index, 'percentualDesconto', v)}
-                    placeholder="Desc. %"
-                  />
-                </div>
                 {itens.length > 1 && (
                   <button type="button" onClick={() => removerItem(index)} className="px-2 text-xs" style={{ color: C.red }}>Remover</button>
                 )}
@@ -331,6 +325,17 @@ export default function Vendas() {
           </div>
 
           <div className="mt-5">
+            <Field label="Desconto da venda (%, opcional)">
+              <PercentInput style={{ maxWidth: 140 }} value={percentualDesconto} onChange={setPercentualDesconto} placeholder="0%" />
+            </Field>
+            {Number(percentualDesconto || 0) > 0 && (
+              <div style={{ fontSize: 11, color: C.textMuted, marginTop: 4 }}>
+                Calculado sobre o valor já com avaria e bonificação descontadas
+              </div>
+            )}
+          </div>
+
+          <div className="mt-5">
             <Field label="Observação (opcional)">
               <textarea
                 className="w-full px-3 py-2 rounded border"
@@ -348,15 +353,15 @@ export default function Vendas() {
           <div style={{ fontSize: 26, fontWeight: 500, color: C.textDark, fontFamily: DISPLAY_FONT, margin: '6px 0 4px' }}>
             {total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
           </div>
-          {(totalDescontoItens > 0 || valorAvaria > 0 || valorBonificado > 0) && (
+          {(valorDesconto > 0 || valorAvaria > 0 || valorBonificado > 0) && (
             <div style={{ fontSize: 12, color: C.textMuted, marginBottom: 12 }}>
               {totalBruto.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} bruto
-              {totalDescontoItens > 0 && <> − {totalDescontoItens.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} desconto</>}
               {valorAvaria > 0 && <> − {valorAvaria.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} avaria</>}
               {valorBonificado > 0 && <> − {valorBonificado.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} bonificado</>}
+              {valorDesconto > 0 && <> − {valorDesconto.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} desconto ({Number(percentualDesconto).toLocaleString('pt-BR')}%)</>}
             </div>
           )}
-          <div style={{ fontSize: 12, color: C.textMuted, marginBottom: 6, marginTop: (totalDescontoItens > 0 || valorAvaria > 0 || valorBonificado > 0) ? 0 : 16 }}>Forma de pagamento</div>
+          <div style={{ fontSize: 12, color: C.textMuted, marginBottom: 6, marginTop: (valorDesconto > 0 || valorAvaria > 0 || valorBonificado > 0) ? 0 : 16 }}>Forma de pagamento</div>
           <Segmented
             options={[['PIX', 'PIX'], ['ESPECIE', 'Espécie'], ['FIADO', 'Fiado'], ['DIVIDIDO', 'Dividido']]}
             value={modoPagamento}

@@ -19,12 +19,14 @@ public record VendaRequestDTO(
         Integer quantidadeAvariaCliente,
         Integer quantidadeAvariaProducao,
         Integer quantidadeBonificados, // obrigatorio so quando quantidadeAvariaProducao > 0 - independente da quantidade
+        // desconto percentual UNICO da venda (nao e mais por item) - calculado sobre o
+        // valor ja liquido de avaria/bonificacao (validado no service)
+        BigDecimal percentualDesconto,
         String observacao, // texto livre, opcional
         @NotEmpty @Valid List<ItemVendaRequestDTO> itens
 ) {
     public record ItemVendaRequestDTO(
             @NotNull Long produtoId,
-            @NotNull Integer quantidade,
-            BigDecimal percentualDesconto // 0-100, opcional - desconto so deste item (validado no service)
+            @NotNull Integer quantidade
     ) {}
 }

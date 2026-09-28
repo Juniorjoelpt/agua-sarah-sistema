@@ -226,7 +226,7 @@ export default function Clientes() {
                     <div style={{ fontSize: 12, color: C.textMuted }}>{formatarDataHora(v.dataHora)}</div>
                     <div className="text-right">
                       <div style={{ fontSize: 14, fontWeight: 600, color: C.textDark }}>{moeda(v.valorTotal)}</div>
-                      {(v.valorBonificado > 0 || v.valorAvaria > 0) && (
+                      {(v.valorBonificado > 0 || v.valorAvaria > 0 || v.valorDesconto > 0) && (
                         <div style={{ fontSize: 11, color: C.textMuted }}>{moeda(v.valorBruto)} bruto</div>
                       )}
                     </div>
