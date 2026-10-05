@@ -39,6 +39,20 @@ public class CaixaController {
         return caixaService.calcularResumo(id);
     }
 
+    // resumo calculado de cada caixa do periodo (lista da tela de Historico de caixa)
+    @GetMapping("/resumos")
+    public List<ResumoCaixaDTO> resumos(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate inicio,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fim) {
+        return caixaService.listarResumosPorPeriodo(inicio, fim);
+    }
+
+    // historico detalhado de um caixa (vendas, despesas e recebimentos de fiado)
+    @GetMapping("/{id}/detalhe")
+    public DetalheCaixaDTO detalhe(@PathVariable Long id) {
+        return caixaService.detalhar(id);
+    }
+
     // historico simples (sem calculo pesado por caixa) - usado na propria tela de Caixa;
     // inicio/fim opcionais, sem eles traz todos os caixas ja abertos
     @GetMapping

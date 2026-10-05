@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
 
 @Service
@@ -111,6 +112,51 @@ public class CaixaService {
                 totalRecebimentosEspecie, totalRecebimentosPix,
                 saldoFinalEspecie, saldoFinalPix
         );
+    }
+
+    public DetalheCaixaDTO detalhar(Long caixaId) {
+        Caixa caixa = buscarPorId(caixaId);
+        ResumoCaixaDTO resumo = calcularResumo(caixaId);
+
+        List<Venda> vendas = vendaRepository.findByCaixaId(caixaId).stream()
+                .sorted(Comparator.comparing(Venda::getDataHora))
+                .toList();
+        List<DetalheCaixaDTO.VendaLinha> linhasVendas = vendas.stream().map(v -> new DetalheCaixaDTO.VendaLinha(
+                v.getId(), v.getDataHora(),
+                v.getCliente() != null ? v.getCliente().getNome() : null,
+                v.getUsuario() != null ? v.getUsuario().getNome() : null,
+                v.getValorBruto(), v.getValorAvaria(), v.getValorBonificado(),
+                v.getValorDesconto(), v.getPercentualDesconto(),
+                v.getQuantidadeAvariaCliente(), v.getQuantidadeAvariaProducao(), v.getQuantidadeBonificados(),
+                v.getValorTotal(), v.getValorRecebidoEspecie(), v.getValorRecebidoPix(), v.getValorFiado(),
+                v.getObservacao(),
+                v.getItens().stream().map(i -> new DetalheCaixaDTO.ItemLinha(
+                        i.getProduto() != null ? i.getProduto().getNome() : null,
+                        i.getQuantidade(), i.getPrecoUnitario(), i.getSubtotal())).toList()
+        )).toList();
+
+        BigDecimal totalVendas = vendas.stream()
+                .map(Venda::getValorTotal).filter(v -> v != null)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        List<DetalheCaixaDTO.DespesaLinha> linhasDespesas = despesaRepository.findByCaixaId(caixaId).stream()
+                .map(d -> new DetalheCaixaDTO.DespesaLinha(d.getId(), d.getDescricao(),
+                        d.getCategoria() != null ? d.getCategoria().name() : null, d.getValor(), d.getData()))
+                .toList();
+
+        List<DetalheCaixaDTO.RecebimentoLinha> linhasRecebimentos = pagamentoContaReceberRepository.findByCaixaId(caixaId).stream()
+                .sorted(Comparator.comparing(PagamentoContaReceber::getData, Comparator.nullsLast(Comparator.naturalOrder())))
+                .map(r -> new DetalheCaixaDTO.RecebimentoLinha(r.getId(), r.getData(),
+                        r.getContaReceber() != null && r.getContaReceber().getCliente() != null
+                                ? r.getContaReceber().getCliente().getNome() : null,
+                        r.getValorEspecie(), r.getValorPix()))
+                .toList();
+
+        return new DetalheCaixaDTO(
+                resumo,
+                caixa.getUsuarioAbertura() != null ? caixa.getUsuarioAbertura().getNome() : null,
+                caixa.getUsuarioFechamento() != null ? caixa.getUsuarioFechamento().getNome() : null,
+                totalVendas, linhasVendas, linhasDespesas, linhasRecebimentos);
     }
 
     private BigDecimal somaCampoVendas(List<Venda> vendas, java.util.function.Function<Venda, BigDecimal> campo) {

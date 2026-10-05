@@ -6,6 +6,7 @@ import { ProtectedRoute, AdminRoute } from './components/ProtectedRoute';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Caixa from './pages/Caixa';
+import HistoricoCaixa from './pages/HistoricoCaixa';
 import Vendas from './pages/Vendas';
 import Orcamentos from './pages/Orcamentos';
 import ContasReceber from './pages/ContasReceber';
@@ -45,6 +46,7 @@ export default function App() {
       >
         <Route path="/" element={<Dashboard />} />
         <Route path="/caixa" element={<Caixa />} />
+        <Route path="/caixa/historico" element={<HistoricoCaixa />} />
         <Route path="/vendas" element={<Vendas />} />
         <Route path="/orcamentos" element={<Orcamentos />} />
         <Route path="/contas-receber" element={<AdminRoute><ContasReceber /></AdminRoute>} />
