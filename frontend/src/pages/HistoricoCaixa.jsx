@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, FileDown } from 'lucide-react';
 import { Card, Field, TextInput, ErrorBanner, Loading, Badge, EmptyState } from '../components/ui';
 import Modal from '../components/Modal';
 import { C, DISPLAY_FONT } from '../theme';
@@ -48,6 +48,7 @@ export default function HistoricoCaixa() {
   const [detalhe, setDetalhe] = useState(null);
   const [carregandoDetalhe, setCarregandoDetalhe] = useState(false);
   const [modalAberto, setModalAberto] = useState(false);
+  const [baixando, setBaixando] = useState(false);
 
   async function buscar() {
     setCarregando(true);
@@ -74,6 +75,18 @@ export default function HistoricoCaixa() {
       setErro(e.message);
     } finally {
       setCarregandoDetalhe(false);
+    }
+  }
+
+  async function baixarPdf() {
+    setBaixando(true);
+    setErro(null);
+    try {
+      await caixaApi.baixarPdf(detalhe.resumo.caixaId, detalhe.resumo.dataAbertura.slice(0, 10));
+    } catch (e) {
+      setErro(e.message);
+    } finally {
+      setBaixando(false);
     }
   }
 
@@ -145,6 +158,16 @@ export default function HistoricoCaixa() {
           <Loading />
         ) : (
           <div style={{ maxHeight: '70vh', overflowY: 'auto', paddingRight: 4 }}>
+            <div className="flex justify-end mb-3">
+              <button
+                onClick={baixarPdf}
+                disabled={baixando}
+                className="flex items-center gap-1.5 px-4 py-2 rounded text-sm font-medium disabled:opacity-60"
+                style={{ background: C.ink, color: '#fff' }}
+              >
+                <FileDown size={14} /> {baixando ? 'Gerando PDF...' : 'Baixar PDF'}
+              </button>
+            </div>
             <Secao titulo="Resumo">
               <div className="flex flex-col gap-1.5">
                 <Linha label="Aberto em" value={`${new Date(r.dataAbertura).toLocaleString('pt-BR')}${detalhe.usuarioAbertura ? ` por ${detalhe.usuarioAbertura}` : ''}`} />

@@ -1,6 +1,11 @@
 package com.aguasarah.caixa;
 
+import com.aguasarah.relatorio.RelatorioPdfService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 
@@ -13,6 +18,7 @@ import java.util.List;
 public class CaixaController {
 
     private final CaixaService caixaService;
+    private final RelatorioPdfService relatorioPdfService;
 
     @PostMapping("/abrir")
     public Caixa abrir(@RequestBody AbrirCaixaRequestDTO dto) {
@@ -37,6 +43,17 @@ public class CaixaController {
     @GetMapping("/{id}/resumo")
     public ResumoCaixaDTO resumo(@PathVariable Long id) {
         return caixaService.calcularResumo(id);
+    }
+
+    // PDF do historico detalhado de um caixa (com timbrado) - liberado pro operador
+    @GetMapping("/{id}/pdf")
+    public ResponseEntity<byte[]> pdf(@PathVariable Long id) {
+        DetalheCaixaDTO detalhe = caixaService.detalhar(id);
+        byte[] conteudo = relatorioPdfService.gerarDetalheCaixa(detalhe);
+        String data = detalhe.resumo().dataAbertura() != null ? detalhe.resumo().dataAbertura().toLocalDate().toString() : "caixa";
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentDisposition(ContentDisposition.attachment().filename("caixa-" + id + "_" + data + ".pdf").build());
+        return ResponseEntity.ok().headers(headers).contentType(MediaType.APPLICATION_PDF).body(conteudo);
     }
 
     // resumo calculado de cada caixa do periodo (lista da tela de Historico de caixa)

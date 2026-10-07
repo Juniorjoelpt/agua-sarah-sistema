@@ -1,5 +1,6 @@
 package com.aguasarah.relatorio;
 
+import com.aguasarah.caixa.DetalheCaixaDTO;
 import com.aguasarah.caixa.ResumoCaixaDTO;
 import com.aguasarah.despesa.CategoriaDespesa;
 import com.aguasarah.despesa.Despesa;
@@ -195,6 +196,149 @@ public class RelatorioPdfService {
             return baos.toByteArray();
         } catch (DocumentException e) {
             throw new IllegalStateException("Erro ao gerar PDF do histórico de caixa", e);
+        }
+    }
+
+    /* ---------- relatorio: detalhe de UM caixa ---------- */
+
+    private static String valorOuTraco(BigDecimal v) {
+        return v != null && v.compareTo(BigDecimal.ZERO) > 0 ? FMT_MOEDA.format(v) : null;
+    }
+
+    private void adicionarSecao(Document document, String titulo) throws DocumentException {
+        Paragraph p = new Paragraph(titulo, FONTE_SECAO);
+        p.setSpacingBefore(14);
+        p.setSpacingAfter(6);
+        document.add(p);
+    }
+
+    private void adicionarVazio(Document document, String texto) throws DocumentException {
+        document.add(new Paragraph(texto, FONTE_CELULA_MUTED));
+    }
+
+    public byte[] gerarDetalheCaixa(DetalheCaixaDTO d) {
+        try {
+            ResumoCaixaDTO r = d.resumo();
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            Document document = criarDocumento(baos);
+
+            String abertura = r.dataAbertura() != null ? r.dataAbertura().format(FMT_DATA_HORA) : "-";
+            String fechamento = r.dataFechamento() != null ? r.dataFechamento().format(FMT_DATA_HORA) : "ainda aberto";
+            adicionarTitulo(document, "Caixa #" + r.caixaId() + " - " + (r.dataAbertura() != null ? r.dataAbertura().toLocalDate().format(FMT_DATA) : ""),
+                    "Aberto em " + abertura + (d.usuarioAbertura() != null ? " por " + d.usuarioAbertura() : "")
+                            + "  ·  Fechado em " + fechamento + (d.usuarioFechamento() != null ? " por " + d.usuarioFechamento() : ""));
+
+            // ---- resumo ----
+            adicionarSecao(document, "Resumo");
+            PdfPTable resumo = new PdfPTable(new float[]{65, 35});
+            resumo.setWidthPercentage(100);
+            BigDecimal recebimentos = r.totalRecebimentosContasReceberEspecie().add(r.totalRecebimentosContasReceberPix());
+            String[][] linhasResumo = {
+                    {"Saldo inicial (espécie)", FMT_MOEDA.format(r.saldoInicialEspecie())},
+                    {"Saldo inicial (PIX)", FMT_MOEDA.format(r.saldoInicialPix())},
+                    {"Vendas em espécie", FMT_MOEDA.format(r.totalVendasEspecie())},
+                    {"Vendas em PIX", FMT_MOEDA.format(r.totalVendasPix())},
+                    {"Recebimentos de fiado", FMT_MOEDA.format(recebimentos)},
+                    {"Despesas", FMT_MOEDA.format(r.totalDespesas())},
+                    {"Galões bonificados", String.valueOf(r.totalGaloesBonificados())},
+                    {"Saldo final (espécie)", FMT_MOEDA.format(r.saldoFinalEspecie())},
+                    {"Saldo final (PIX)", FMT_MOEDA.format(r.saldoFinalPix())},
+            };
+            for (int i = 0; i < linhasResumo.length; i++) {
+                adicionarLinhaSimples(resumo, linhasResumo[i][0], linhasResumo[i][1], i % 2 == 1);
+            }
+            document.add(resumo);
+
+            // ---- vendas ----
+            adicionarSecao(document, "Vendas (" + d.vendas().size() + ") - total " + FMT_MOEDA.format(d.totalVendas()));
+            if (d.vendas().isEmpty()) {
+                adicionarVazio(document, "Nenhuma venda neste caixa.");
+            } else {
+                PdfPTable t = new PdfPTable(new float[]{9, 19, 27, 21, 24});
+                t.setWidthPercentage(100);
+                t.setHeaderRows(1);
+                for (String h : new String[]{"Venda", "Cliente", "Itens", "Pagamento", "Total / ajustes"}) {
+                    t.addCell(celulaCabecalho(h));
+                }
+                int linha = 0;
+                for (DetalheCaixaDTO.VendaLinha v : d.vendas()) {
+                    boolean par = linha++ % 2 == 1;
+                    t.addCell(celula("#" + v.id() + "\n" + v.dataHora().format(DateTimeFormatter.ofPattern("HH:mm")), FONTE_CELULA, par));
+                    t.addCell(celula(v.cliente() != null ? v.cliente() : "Consumidor", FONTE_CELULA, par));
+
+                    StringBuilder itens = new StringBuilder();
+                    for (DetalheCaixaDTO.ItemLinha i : v.itens()) {
+                        if (itens.length() > 0) itens.append("\n");
+                        itens.append(i.quantidade()).append("x ").append(i.produto());
+                    }
+                    t.addCell(celula(itens.toString(), FONTE_CELULA, par));
+
+                    StringBuilder pg = new StringBuilder();
+                    if (valorOuTraco(v.valorRecebidoEspecie()) != null) pg.append("Espécie ").append(valorOuTraco(v.valorRecebidoEspecie())).append("\n");
+                    if (valorOuTraco(v.valorRecebidoPix()) != null) pg.append("PIX ").append(valorOuTraco(v.valorRecebidoPix())).append("\n");
+                    if (valorOuTraco(v.valorFiado()) != null) pg.append("Fiado ").append(valorOuTraco(v.valorFiado())).append("\n");
+                    t.addCell(celula(pg.toString().trim(), FONTE_CELULA, par));
+
+                    StringBuilder aj = new StringBuilder(FMT_MOEDA.format(v.valorTotal()));
+                    if (v.quantidadeAvariaCliente() != null && v.quantidadeAvariaCliente() > 0) aj.append("\nAvaria cliente: ").append(v.quantidadeAvariaCliente());
+                    if (v.quantidadeAvariaProducao() != null && v.quantidadeAvariaProducao() > 0) aj.append("\nAvaria produção: ").append(v.quantidadeAvariaProducao());
+                    if (v.quantidadeBonificados() != null && v.quantidadeBonificados() > 0) aj.append("\nBonificados: ").append(v.quantidadeBonificados());
+                    if (valorOuTraco(v.valorDesconto()) != null) aj.append("\nDesconto ").append(v.percentualDesconto().stripTrailingZeros().toPlainString()).append("%: -").append(valorOuTraco(v.valorDesconto()));
+                    t.addCell(celula(aj.toString(), FONTE_CELULA_NEGRITO, par));
+
+                    if (v.observacao() != null && !v.observacao().isBlank()) {
+                        PdfPCell obs = celula("Obs: " + v.observacao(), FONTE_CELULA_MUTED, par);
+                        obs.setColspan(5);
+                        t.addCell(obs);
+                    }
+                }
+                document.add(t);
+            }
+
+            // ---- despesas ----
+            adicionarSecao(document, "Despesas (" + d.despesas().size() + ")");
+            if (d.despesas().isEmpty()) {
+                adicionarVazio(document, "Nenhuma despesa neste caixa.");
+            } else {
+                PdfPTable t = new PdfPTable(new float[]{50, 25, 25});
+                t.setWidthPercentage(100);
+                t.setHeaderRows(1);
+                for (String h : new String[]{"Descrição", "Categoria", "Valor"}) t.addCell(celulaCabecalho(h));
+                int linha = 0;
+                for (DetalheCaixaDTO.DespesaLinha x : d.despesas()) {
+                    boolean par = linha++ % 2 == 1;
+                    t.addCell(celula(x.descricao(), FONTE_CELULA, par));
+                    String cat = x.categoria() == null ? "-" : CATEGORIA_LABEL.getOrDefault(CategoriaDespesa.valueOf(x.categoria()), x.categoria());
+                    t.addCell(celula(cat, FONTE_CELULA, par));
+                    t.addCell(celula(FMT_MOEDA.format(x.valor()), FONTE_CELULA_NEGRITO, par));
+                }
+                document.add(t);
+            }
+
+            // ---- recebimentos ----
+            adicionarSecao(document, "Recebimentos de fiado (" + d.recebimentos().size() + ")");
+            if (d.recebimentos().isEmpty()) {
+                adicionarVazio(document, "Nenhum recebimento neste caixa.");
+            } else {
+                PdfPTable t = new PdfPTable(new float[]{16, 38, 23, 23});
+                t.setWidthPercentage(100);
+                t.setHeaderRows(1);
+                for (String h : new String[]{"Hora", "Cliente", "Espécie", "PIX"}) t.addCell(celulaCabecalho(h));
+                int linha = 0;
+                for (DetalheCaixaDTO.RecebimentoLinha x : d.recebimentos()) {
+                    boolean par = linha++ % 2 == 1;
+                    t.addCell(celula(x.data() != null ? x.data().format(DateTimeFormatter.ofPattern("HH:mm")) : "-", FONTE_CELULA, par));
+                    t.addCell(celula(x.cliente() != null ? x.cliente() : "-", FONTE_CELULA, par));
+                    t.addCell(celula(FMT_MOEDA.format(x.valorEspecie() != null ? x.valorEspecie() : BigDecimal.ZERO), FONTE_CELULA, par));
+                    t.addCell(celula(FMT_MOEDA.format(x.valorPix() != null ? x.valorPix() : BigDecimal.ZERO), FONTE_CELULA, par));
+                }
+                document.add(t);
+            }
+
+            document.close();
+            return baos.toByteArray();
+        } catch (DocumentException e) {
+            throw new IllegalStateException("Erro ao gerar PDF do caixa", e);
         }
     }
 
